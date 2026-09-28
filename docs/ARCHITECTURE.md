@@ -87,7 +87,7 @@ export const SHOP_ITEMS: readonly ShopItem[];            // цены в Pi; се
 ```
 Баланс юнитов, артефактов, построек, заклинаний, навыков и заданий переносится из `docs/prototype.html`
 (там объекты `U`, `ART`, `SET`, `BUILD`, `UPG`, `SKILLS`, `QUESTS`). Прирост за неделю для замка:
-копейщики 10, лучники 6, грифоны 3 (если есть башня); для некрополя скелеты 8, призраки 3, личи 2 со 2-й недели.
+копейщики 10, лучники 6, грифоны 3 (если есть башня); для некрополя скелеты 12, призраки 5, личи 2 со 2-й недели (стартовый запас 8/3/0).
 
 ### Карты (`maps.ts`)
 ```ts
@@ -95,14 +95,16 @@ export type Terrain = "." | "F" | "M" | "W";            // равнина (пр�
 export interface MapObjectDef { kind: "castle" | "mine" | "chest" | "artifact" | "monster";
   x: number; y: number; owner?: 0 | 1; artifact?: ArtifactId; army?: ArmyStack[]; garrison?: ArmyStack[] }
 export interface MapDef { id: string; name: string; cols: number; rows: number; terrain: string[];
-  starts: { hero: { x: number; y: number }; castleIndex: number }[]; objects: MapObjectDef[] }
+  starts: { hero: { x: number; y: number }; castleIndex: number;
+            faction?: Faction; heroName?: string; army?: ArmyStack[]; equipped?: Partial<Record<SlotId, ArtifactId>>; gold?: number }[];
+  objects: MapObjectDef[] }   // недостающие поля старта берутся из SEAT_DEFAULTS (mapStart(map, seat))
 export const MAPS: Record<string, MapDef>;               // минимум "valley" (карта прототипа 14×16, 2 игрока)
 ```
 
 ### Состояние игры (`types.ts`, `game.ts`)
 ```ts
 export type PlayerId = string;
-export interface ArmyStack { unit: UnitId; count: number }
+export interface ArmyStack { unit: UnitId; count: number; countHint?: string /* только в PlayerView */ }
 export interface Hero { id: string; owner: PlayerId; name: string; x: number; y: number; mp: number;
   level: number; exp: number; alive: boolean;
   base: Record<StatKey, number>;                         // atk, def, pow = 1; остальное 0
@@ -138,12 +140,14 @@ export type GameAction =
   | { type: "battle"; action: BattleAction }
   | { type: "autoBattle" };                              // ИИ доигрывает бой за этого игрока
 export interface ActionResult { ok: boolean; error?: string; events: GameEvent[] }
-export function applyAction(state: GameState, player: PlayerId, action: GameAction): ActionResult; // мутирует state
+export function applyAction(state: GameState, player: PlayerId, action: GameAction): ActionResult; // мутирует state, в game.ts
+export function forceEndDay(state: GameState, player: PlayerId): ActionResult;  // для таймера сервера: ИИ доигрывает бои игрока и завершает его день
+export function eventsForPlayer(state: GameState, player: PlayerId, events: GameEvent[]): GameEvent[]; // события без чужих тайн
 export function findPath(state: GameState, heroId: string, to: { x: number; y: number }): { x: number; y: number }[];
 ```
 `GameEvent` это размеченное объединение для анимаций и звуков на клиенте:
 `{ type: "moved"; heroId; path }`, `{ type: "gold"; player; amount; reason }`, `{ type: "artifact"; player; artifact }`,
-`{ type: "battleStart"; battleId }`, `{ type: "battle"; battleId; ev: BattleEvent }`, `{ type: "battleEnd"; battleId; winner: PlayerId | "neutral" }`,
+`{ type: "battleStart"; battleId; sides? }`, `{ type: "battle"; battleId; ev: BattleEvent }`, `{ type: "battleEnd"; battleId; winner: PlayerId | "neutral"; sides? }`,
 `{ type: "level"; player }`, `{ type: "quest"; player; quest }`, `{ type: "newDay"; day }`, `{ type: "newWeek" }`,
 `{ type: "mine"; player; objectId }`, `{ type: "defeat"; player }`, `{ type: "victory"; player }`, `{ type: "toast"; player?; text }`.
 
@@ -151,6 +155,10 @@ export function findPath(state: GameState, heroId: string, to: { x: number; y: n
 `endDay`, выполняется `endOfDay`: ходы ИИ, доход (замок 1000, рудник 500), прирост в начале недели (каждые 7 дней),
 сброс шагов и `builtToday`, `day++`. Сервер отвечает за таймер хода и может вызвать `endDay` за игрока.
 Поражение: захвачен замок или погиб герой. Победа: у противника поражение.
+Уточнения, принятые при реализации: нападающий в бою всегда сторона 0; ход к цели заканчивается на клетке боя;
+после конца дня игрок не может ходить, нанимать и строить, но может доигрывать бой и выбирать навык; цель хода
+должна быть на исследованной клетке; задания и добыча артефактов с монстров только для людей; найм, постройка и
+улучшение требуют, чтобы герой стоял в своём замке; не больше 5 отрядов в армии.
 
 ### Бой (`battle.ts`)
 ```ts
@@ -161,7 +169,10 @@ export interface Battle { id: string; cols: 8; rows: 11; rngState: number; round
   heroes: [BattleHero | null, BattleHero | null]; over: boolean; winnerSide: 0 | 1 | null }
 export interface BattleHero { heroId: string; name: string; stats: Record<StatKey, number>; spells: SpellId[] }
 export interface ActiveBattle { battle: Battle; sides: [PlayerId | "neutral", PlayerId | "neutral"];
+  auto?: [boolean, boolean];   // сторона играет автоматически (ИИ, нейтралы, autoBattle)
   context: { kind: "monster" | "hero" | "garrison"; objectId?: string; heroIds: string[] } }
+// Battle.id строится только из открытых данных: `b${day}-${heroId}-${objectId|heroId}`. Расстановка камней от
+// открытого layoutSeed, а зерно костей боя берётся из скрытого генератора игры и никуда не отдаётся.
 export type BattleAction =
   | { type: "move"; to: [number, number] }
   | { type: "attack"; target: number; from?: [number, number] }  // ближний бой, from = клетка, с которой бить
@@ -179,6 +190,7 @@ export function previewAttack(b: Battle, attacker: number, target: number, range
 export function applyBattleAction(b: Battle, action: BattleAction): { ok: boolean; error?: string; events: BattleEvent[] }; // за активный отряд
 export function chooseAiBattleAction(b: Battle): BattleAction;                           // для активного отряда
 export function autoResolve(b: Battle): BattleEvent[];                                   // доиграть бой за обе стороны
+export function applyAiBattleAction(b: Battle): { ok: boolean; events: BattleEvent[] };  // ход ИИ, включая «стоять на месте»
 ```
 Формула урона, удача (шанс удачи*10% на x2), мораль (шанс мораль*10% на повторный ход раз в раунд),
 способности, заклинания (молния `(15+15*магия)*(1+boltX)`, лечение `20+20*магия` с подъёмом павших до
@@ -189,8 +201,11 @@ export function autoResolve(b: Battle): BattleEvent[];                          
 export interface PlayerView { you: PlayerId; state: GameState }   // копия, где скрыто то, чего игрок не видит
 export function playerView(state: GameState, player: PlayerId): PlayerView;
 ```
-Скрывается: объекты и чужие герои на неисследованных клетках, точная численность чужих армий (заменяется на
-`approx`-диапазон через поле `countHint`), золото и рюкзак противника, `rngState` (заменяется на 0).
+Скрывается: объекты и чужие герои на неисследованных клетках удаляются из копии (у противника `heroId`/`castleId`
+могут указывать на отсутствующее), точная численность чужих армий, монстров и гарнизонов (`count: 0` и `countHint`),
+золото, рюкзак, прирост, задания, выборы навыков и карта исследования противника, `rngState` игры и боёв (0),
+бои, в которых игрок не участвует. Ограничение: стартовые размеры монстров открыты, потому что `MAPS` есть в клиенте.
+Генератор 32-битный, поэтому теоретически зерно можно подобрать по наблюдаемым броскам; усилить позже секретом на сервере.
 
 ### Протокол (`protocol.ts`)
 ```ts
@@ -199,7 +214,7 @@ export type ServerMessage =
   | { t: "view"; view: PlayerView; events: GameEvent[]; ackSeq?: number }
   | { t: "error"; message: string; ackSeq?: number }
   | { t: "timer"; endsAt: number };                       // конец дня по таймеру, unix ms
-export interface RoomJoinOptions { token: string; mode: "pvp"; mapId?: string }
+export interface RoomJoinOptions { token: string; mode: "pvp"; mapId?: string; code?: string /* 1..16 символов */ }
 export const ROOM_NAME = "match";
 export interface AuthResponse { token: string; user: { uid: string; username: string; premiumUntil: number | null; banner: string | null; owned: string[] } }
 ```
@@ -219,7 +234,9 @@ export interface AuthResponse { token: string; user: { uid: string; username: st
   - `POST /api/payments/incomplete` `{ payment }`: для `onIncompletePaymentFound`, довести платёж до конца или отменить.
 - Хранилище за интерфейсом `Store` (пользователи, покупки, платежи). Сейчас `MemoryStore`; PostgreSQL следующим шагом.
 - Colyseus-комната `match` (2 игрока, PvP): `onAuth` проверяет токен сессии, `onJoin` сажает игрока, при двух игроках
-  `createGame` с покупками (`loadout`), `onMessage("action")` вызывает `applyAction` и рассылает каждому `playerView`.
+  `createGame` с покупками (`loadout`), `onMessage("action")` проверяет сообщение `isClientMessage`, вызывает `applyAction`
+  и шлёт каждому игроку `{ t: "view", view: playerView(state, p), events: eventsForPlayer(state, p, result.events) }`.
+  По таймеру дня сервер вызывает `forceEndDay` за тех, кто не закончил.
   Переподключение 60 секунд, таймер дня 90 секунд. Комнаты с кодом для игры с другом через `filterBy(["code"])`.
 
 ## Клиент
