@@ -1,0 +1,850 @@
+<title>Короны Пустоши: прототип</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+SC:wght@500;700&family=Alegreya+Sans:wght@400;500;700&display=swap">
+<style>
+/* Layout: one phone-width game column; map or battle canvas in the middle, resource bar on top, controls below */
+:root {
+  --bg: #14161b; --panel: #1f222b; --panel-2: #2a2e3a; --line: #3a3f4e;
+  --text: #ebe2cb; --muted: #a39a86; --gold: #d9a946; --blue: #4a7cc4; --red: #c24a3e; --good: #6fae5a;
+  --display: "Alegreya SC", Georgia, serif; --body: "Alegreya Sans", "Segoe UI", system-ui, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--text); font-family: var(--body); font-size: 15px; line-height: 1.45; padding-inline: 16px; padding-block: 14px 24px; }
+.app { max-width: 520px; margin: 0 auto; display: grid; gap: 8px; }
+h1 { font-family: var(--display); color: var(--gold); font-size: 26px; margin: 0; line-height: 1.1; }
+.sub { color: var(--muted); font-size: 13px; margin: 0; }
+.bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; background: linear-gradient(#2c2f3b, #1c1e26); border: 1px solid #000; border-radius: 8px; padding: 6px 10px; font-size: 13px; font-variant-numeric: tabular-nums; }
+.res { display: flex; gap: 12px; flex-wrap: wrap; }
+.res i { font-style: normal; display: inline-flex; align-items: center; gap: 4px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.day { color: var(--gold); font-weight: 700; }
+.stage { position: relative; border-radius: 10px; overflow: hidden; border: 1px solid #000; background: #0b0c10; }
+canvas { display: block; width: 100%; height: auto; touch-action: manipulation; cursor: pointer; }
+.hint { font-size: 13px; color: var(--text); background: #15171d; border-radius: 8px; padding: 6px 10px; min-height: 32px; }
+.btns { display: flex; gap: 6px; flex-wrap: wrap; }
+.btn { font: 700 13px var(--body); color: #1a1406; background: var(--gold); border: 0; border-radius: 7px; padding: 8px 12px; cursor: pointer; }
+.btn.ghost { background: var(--panel-2); color: var(--text); border: 1px solid var(--line); }
+.btn:disabled { opacity: .45; cursor: default; }
+.btn.on { outline: 2px solid var(--gold); }
+.btn:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.hero { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.portrait { width: 34px; height: 34px; flex: none; border-radius: 7px; background: linear-gradient(135deg, var(--blue), #1d3050); border: 1px solid var(--gold); display: grid; place-items: center; font-family: var(--display); font-size: 17px; }
+.stats { font-size: 12px; color: var(--muted); }
+.stats b { color: var(--text); }
+.army { display: flex; gap: 4px; flex-wrap: wrap; }
+.army span { background: #15171d; border: 1px solid var(--line); border-radius: 6px; padding: 2px 6px; font-size: 12px; }
+.overlay { position: absolute; inset: 0; background: rgba(8,9,12,.86); display: grid; place-items: center; padding: 14px; }
+.panel { background: var(--panel); border: 1px solid var(--gold); border-radius: 12px; padding: 14px; width: 100%; max-width: 380px; display: grid; gap: 10px; max-height: 100%; overflow-y: auto; }
+.panel h2 { font-family: var(--display); color: var(--gold); margin: 0; font-size: 22px; }
+.row { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 14px; }
+.row small { color: var(--muted); display: block; font-size: 12px; }
+.toast { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); background: #000d; border: 1px solid var(--gold); padding: 6px 12px; border-radius: 8px; font-size: 13px; max-width: 92%; text-align: center; pointer-events: none; }
+.slots { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.slot { background: #15171d; border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; font-size: 12px; min-width: 0; display: grid; gap: 2px; align-content: start; }
+.slot > span:first-child { color: var(--muted); font-size: 11px; }
+.slot button { justify-self: start; font: 600 11px var(--body); background: none; border: 0; color: var(--muted); padding: 0; cursor: pointer; text-decoration: underline; }
+.r0 { color: #d8cfb6; } .r1 { color: #6fb0ec; } .r2 { color: #c08cf0; } .r3 { color: #f0a64a; }
+.fx { color: var(--muted); font-size: 11px; }
+.choice { display: grid; gap: 8px; }
+.choice .btn { text-align: left; }
+.top { display: grid; gap: 8px; }
+.top .btn { padding: 6px 10px; font-size: 12px; }
+.help { color: var(--muted); font-size: 13px; }
+.help summary { cursor: pointer; color: var(--text); }
+.help ul { margin: 6px 0 0; padding-left: 18px; }
+</style>
+
+<div class="app">
+  <div class="top">
+    <div>
+      <h1>Короны Пустоши</h1>
+      <p class="sub">Играбельный прототип. Вы синие, против вас ИИ за Нежить. Захватите красный замок в правом верхнем углу.</p>
+    </div>
+    <div class="btns"><button class="btn ghost" id="sndBtn">Звук</button><button class="btn ghost" id="musBtn">Музыка</button><button class="btn ghost" id="newBtn">Новая игра</button></div>
+  </div>
+  <div class="bar">
+    <div class="res"><i><span class="dot" style="background:#e3c14b"></span><span id="gold">0</span></i><i class="stats">доход <b id="income">0</b>/день</i></div>
+    <span class="day" id="dayLbl">Неделя 1, день 1</span>
+  </div>
+  <div class="stage" id="stage">
+    <canvas id="map" width="588" height="672" aria-label="Карта приключений"></canvas>
+    <canvas id="battle" width="600" height="600" aria-label="Тактический бой" hidden></canvas>
+    <div class="toast" id="toast" hidden></div>
+    <div class="overlay" id="overlay" hidden><div class="panel" id="panel"></div></div>
+  </div>
+  <div class="hint" id="hint">Нажмите на клетку, чтобы проложить путь, и ещё раз, чтобы идти.</div>
+  <div class="bar" id="mapBar">
+    <div class="hero"><div class="portrait">Э</div><div><div><b>Эльмира</b> <span class="stats">ур. <b id="lvl">1</b> · атака <b id="atk">1</b> · защита <b id="def">1</b> · магия <b id="pow">1</b></span></div><div class="stats">ход: <b id="mp">12</b> · опыт <b id="exp">0</b></div></div></div>
+    <div class="btns"><button class="btn ghost" id="questBtn">Задания</button><button class="btn ghost" id="heroBtn">Герой</button><button class="btn ghost" id="castleBtn">Замок</button><button class="btn" id="endBtn">Конец дня</button></div>
+  </div>
+  <div class="army" id="armyLbl"></div>
+  <div class="bar" id="battleBar" hidden>
+    <div class="btns"><button class="btn ghost" id="defBtn">Защита</button><button class="btn ghost" id="spellBtn">Магия</button><button class="btn ghost" id="autoBtn">Автобой</button></div>
+    <span class="day" id="roundLbl">Раунд 1</span>
+  </div>
+  <details class="help">
+    <summary>Как играть</summary>
+    <ul>
+      <li>Каждый день у героя 12 шагов. Сундуки дают золото, шахты дают 500 золота в день.</li>
+      <li>Монстры охраняют соседние клетки. Войти в такую клетку значит начать бой.</li>
+      <li>В своём замке нанимайте войска. Каждую неделю приходят новые. Грифонам нужна башня.</li>
+      <li>В бою нажмите на подсвеченный гекс, чтобы походить, или на врага, чтобы атаковать. Лучники стреляют издалека.</li>
+      <li>Первое нажатие на врага показывает прогноз удара, второе атакует.</li>
+      <li>Магия: одно заклинание за раунд. Молния бьёт врага, Лечение поднимает павших, Ускорение даёт +2 к скорости.</li>
+      <li>Удача даёт шанс двойного урона, мораль даёт шанс на дополнительный ход.</li>
+      <li>Артефакты лежат на карте под охраной и выпадают из монстров. Надевайте их в окне «Герой». Три предмета «Пепла» дают бонус комплекта.</li>
+      <li>На каждом уровне выбирайте один из двух навыков.</li>
+      <li>Способности: копейщики наносят +50% урона летающим, грифоны отвечают на каждую атаку, призракам не отвечают, личи задевают соседние вражеские отряды.</li>
+      <li>В замке одна постройка в день: Грифонья башня, Гильдия магов (открывает Лечение и Ускорение), Кузница (улучшение отрядов).</li>
+      <li>Задания для новичка дают золото и опыт.</li>
+      <li>Игра сохраняется сама в этом браузере.</li>
+      <li>Если враг захватит ваш замок или погибнет ваш герой, вы проиграли.</li>
+    </ul>
+  </details>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  // ================= data =================
+  var U = {
+    pike:    { name: "Копейщики", hp: 10, atk: 4, def: 5, dmg: [1, 3], spd: 4, cost: 60, icon: "sword" },
+    archer:  { name: "Лучники", hp: 10, atk: 6, def: 3, dmg: [2, 3], spd: 4, shots: 12, cost: 100, icon: "bow" },
+    griffin: { name: "Грифоны", hp: 25, atk: 8, def: 8, dmg: [3, 6], spd: 6, fly: true, cost: 200, icon: "griffin" },
+    skel:    { name: "Скелеты", hp: 6, atk: 5, def: 4, dmg: [1, 3], spd: 4, cost: 60, icon: "skel" },
+    ghost:   { name: "Призраки", hp: 18, atk: 7, def: 7, dmg: [2, 4], spd: 5, fly: true, cost: 150, icon: "ghost" },
+    lich:    { name: "Личи", hp: 30, atk: 13, def: 10, dmg: [11, 13], spd: 6, shots: 12, cost: 550, icon: "lich" },
+    wolf:    { name: "Волки", hp: 6, atk: 5, def: 3, dmg: [1, 4], spd: 6, icon: "wolf" }
+  };
+  U.halberd = { name: "Алебардщики", hp: 10, atk: 6, def: 5, dmg: [2, 3], spd: 5, cost: 100, icon: "sword", up: true };
+  U.marksman = { name: "Меткие стрелки", hp: 10, atk: 6, def: 3, dmg: [3, 4], spd: 6, shots: 24, cost: 160, icon: "bow", up: true };
+  U.royal = { name: "Королевские грифоны", hp: 25, atk: 9, def: 9, dmg: [3, 6], spd: 9, fly: true, cost: 300, icon: "griffin", up: true };
+  U.pike.antiFly = U.halberd.antiFly = true; U.griffin.unlimRetal = U.royal.unlimRetal = true; U.ghost.noRetal = true; U.lich.splash = true;
+  U.pike.ab = U.halberd.ab = "+50% урона летающим"; U.griffin.ab = U.royal.ab = "отвечает на каждую атаку"; U.ghost.ab = "враг не отвечает"; U.lich.ab = "задевает соседних врагов";
+  var UPG = { pike: ["halberd", 40], archer: ["marksman", 60], griffin: ["royal", 100] };
+  var BUILD = { tower: { name: "Грифонья башня", cost: 2000, desc: "открывает грифонов, 3 в неделю" }, guild: { name: "Гильдия магов", cost: 1500, desc: "открывает Лечение и Ускорение" }, forge: { name: "Кузница", cost: 1000, desc: "позволяет улучшать отряды" } };
+  var QUESTS = [
+    ["chest", "Откройте сундук", 500, 0], ["mine", "Захватите рудник", 1000, 0], ["fight", "Победите охрану монстров", 0, 150],
+    ["art", "Найдите артефакт", 1000, 0], ["build", "Постройте здание в замке", 500, 0], ["upgrade", "Улучшите отряд в кузнице", 0, 200],
+    ["lvl3", "Достигните 3-го уровня", 1500, 0], ["boss", "Захватите замок Моргота", 0, 0]
+  ];
+  var SLOTS = [["head", "Голова"], ["neck", "Шея"], ["shoulders", "Плечи"], ["torso", "Торс"], ["cloak", "Плащ"], ["feet", "Ноги"], ["weapon", "Оружие"], ["shield", "Щит"], ["ring1", "Кольцо"], ["ring2", "Кольцо"]];
+  var RAR = ["обычный", "редкий", "эпический", "легендарный"];
+  var ART = {
+    sword:   { name: "Меч силы", slot: "weapon", r: 0, fx: { atk: 2 } },
+    shield:  { name: "Щит стража", slot: "shield", r: 0, fx: { def: 2 } },
+    rookie:  { name: "Кираса новобранца", slot: "torso", r: 0, fx: { def: 1, atk: 1 } },
+    ringA:   { name: "Кольцо ученика", slot: "ring", r: 0, fx: { pow: 1 } },
+    boots:   { name: "Сапоги странника", slot: "feet", r: 1, fx: { move: 3 } },
+    cloakW:  { name: "Плащ ветра", slot: "cloak", r: 1, fx: { spd: 1 } },
+    amulet:  { name: "Амулет удачи", slot: "neck", r: 1, fx: { luck: 1 } },
+    valor:   { name: "Наплечники доблести", slot: "shoulders", r: 1, fx: { morale: 1 } },
+    ringM:   { name: "Кольцо мага", slot: "ring", r: 1, fx: { pow: 2 } },
+    crown:   { name: "Корона владыки", slot: "head", r: 2, fx: { atk: 2, def: 2, pow: 1 } },
+    ashHelm: { name: "Шлем пепла", slot: "head", r: 2, set: "ash", fx: { atk: 1, def: 1 } },
+    ashMail: { name: "Кираса пепла", slot: "torso", r: 2, set: "ash", fx: { def: 3 } },
+    ashBlade:{ name: "Клинок пепла", slot: "weapon", r: 2, set: "ash", fx: { atk: 3 } },
+    orb:     { name: "Сфера бури", slot: "neck", r: 3, fx: { boltX: 1, pow: 1 }, desc: "молния бьёт вдвое сильнее" }
+  };
+  var SET = { ash: { name: "Комплект пепла", need: 3, fx: { dmgPct: 20, morale: 1 }, desc: "+20% урона всем отрядам, мораль +1" } };
+  var DROPS = ["cloakW", "valor", "ringM", "rookie", "amulet"];
+  var FXN = { atk: "атака", def: "защита", pow: "магия", move: "шагов в день", spd: "скорость отрядов", luck: "удача", morale: "мораль", dmgPct: "% урона" };
+  function fxText(a) { var t = Object.keys(a.fx).filter(function (k) { return FXN[k]; }).map(function (k) { return "+" + a.fx[k] + " " + FXN[k]; }); if (a.desc) t.push(a.desc); if (a.set) t.push("часть комплекта"); return t.join(", "); }
+  var SKILLS = [["atk", 2, "Нападение: +2 атака"], ["def", 2, "Оборона: +2 защита"], ["pow", 1, "Чародейство: +1 магия"], ["move", 2, "Следопыт: +2 шага в день"], ["luck", 1, "Удача: +1"], ["morale", 1, "Лидерство: +1 мораль"]];
+  var TERRAIN = [
+    "FF....MMM..FFF",
+    "F.....MM.....F",
+    "..F.......F...",
+    "..FF..WW......",
+    "......WWW..MM.",
+    ".MM....W....M.",
+    ".M..F.......F.",
+    "....FF..MM....",
+    "....F...MM..F.",
+    ".F........F...",
+    ".FF..WWW......",
+    "......WW..FF..",
+    "..M.......F...",
+    ".MM....FF.....",
+    "F.....FF.....F",
+    "FFF.......FFFF"
+  ];
+  var COLS = 14, ROWS = 16, T = 42;
+  var C = { blue: "#4a7cc4", red: "#c24a3e", text: "#ebe2cb" };
+  var G; // game state
+
+  function rng(seed) { return function () { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; }; }
+  function ri(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
+  function $(id) { return document.getElementById(id); }
+
+  function newGame() {
+    try { localStorage.removeItem(SAVE); } catch (e) {}
+    G = {
+      pendingLv: 0,
+      day: 1, over: false, busy: false,
+      gold: { b: 2500, r: 2500 },
+      growth: { pike: 10, archer: 6, griffin: 0 },
+      rGrowth: { skel: 8, ghost: 3, lich: 0 },
+      built: {}, builtToday: false, quests: {},
+      heroes: {
+        b: { side: "b", name: "Эльмира", x: 3, y: 13, mp: 12, atk: 1, def: 1, pow: 1, luck: 0, morale: 0, lvl: 1, exp: 0, alive: true, eq: {}, bag: [], army: [{ type: "pike", n: 20 }, { type: "archer", n: 10 }] },
+        r: { side: "r", name: "Моргот", x: 11, y: 2, mp: 12, atk: 1, def: 1, pow: 1, luck: 0, morale: 0, lvl: 1, exp: 0, alive: true, eq: { weapon: "ashBlade", shield: "shield" }, bag: [], army: [{ type: "skel", n: 20 }, { type: "ghost", n: 3 }] }
+      },
+      objs: [
+        { type: "castle", side: "b", x: 2, y: 14 },
+        { type: "castle", side: "r", x: 11, y: 1, garrison: [{ type: "skel", n: 20 }, { type: "ghost", n: 3 }] },
+        { type: "mine", x: 7, y: 8, owner: null },
+        { type: "mine", x: 5, y: 2, owner: null },
+        { type: "chest", x: 0, y: 9 }, { type: "chest", x: 9, y: 12 }, { type: "chest", x: 13, y: 6 }, { type: "chest", x: 6, y: 5 },
+        { type: "art", id: "sword", x: 3, y: 7 }, { type: "art", id: "ashMail", x: 11, y: 9 },
+        { type: "art", id: "boots", x: 4, y: 1 }, { type: "art", id: "ringA", x: 13, y: 9 },
+        { type: "art", id: "crown", x: 8, y: 1 }, { type: "art", id: "ashHelm", x: 0, y: 3 }, { type: "art", id: "orb", x: 12, y: 12 },
+        { type: "monster", x: 8, y: 2, army: [{ type: "ghost", n: 10 }] },
+        { type: "monster", x: 1, y: 3, army: [{ type: "wolf", n: 25 }] },
+        { type: "monster", x: 12, y: 13, army: [{ type: "ghost", n: 14 }] },
+        { type: "monster", x: 3, y: 8, army: [{ type: "wolf", n: 14 }] },
+        { type: "monster", x: 11, y: 10, army: [{ type: "skel", n: 18 }] },
+        { type: "monster", x: 4, y: 11, army: [{ type: "wolf", n: 8 }] },
+        { type: "monster", x: 9, y: 5, army: [{ type: "wolf", n: 20 }] }
+      ],
+      seen: [], path: []
+    };
+    for (var y = 0; y < ROWS; y++) { G.seen[y] = []; for (var x = 0; x < COLS; x++) G.seen[y][x] = false; }
+    reveal();
+    $("battle").hidden = true; $("map").hidden = false; $("battleBar").hidden = true; $("mapBar").hidden = false;
+    closePanel(); updateUI(); drawMap();
+    hint("Нажмите на клетку, чтобы проложить путь, и ещё раз, чтобы идти. Сундук рядом с замком внизу.");
+  }
+  var SAVE = "korony-pustoshi-save-v3";
+  function save() { if (!G || G.over) return; try { localStorage.setItem(SAVE, JSON.stringify(G)); } catch (e) {} }
+  function load() {
+    try { var raw = localStorage.getItem(SAVE); if (!raw) return false; var g = JSON.parse(raw); if (!g || g.over || !g.heroes) return false; G = g; } catch (e) { return false; }
+    G.busy = false; G.path = [];
+    $("battle").hidden = true; $("map").hidden = false; $("battleBar").hidden = true; $("mapBar").hidden = false;
+    closePanel(); updateUI(); drawMap(); hint("Партия продолжена с сохранения."); checkLevelUp();
+    return true;
+  }
+
+  // ================= helpers =================
+  function objAt(x, y) { return G.objs.filter(function (o) { return o.x === x && o.y === y && !o.gone; })[0]; }
+  function terrainOk(x, y) { return x >= 0 && y >= 0 && x < COLS && y < ROWS && TERRAIN[y][x] === "."; }
+  function guardOf(x, y) {
+    return G.objs.filter(function (o) { return o.type === "monster" && !o.gone && Math.abs(o.x - x) <= 1 && Math.abs(o.y - y) <= 1; })[0];
+  }
+  function heroAt(x, y) { var h = G.heroes.b; if (h.alive && h.x === x && h.y === y) return h; h = G.heroes.r; if (h.alive && h.x === x && h.y === y) return h; return null; }
+  function reveal() {
+    var h = G.heroes.b, pts = [[h.x, h.y, 4], [2, 14, 3]];
+    G.objs.forEach(function (o) { if (o.type === "mine" && o.owner === "b") pts.push([o.x, o.y, 2]); });
+    pts.forEach(function (p) { for (var y = 0; y < ROWS; y++) for (var x = 0; x < COLS; x++) if (Math.hypot(x - p[0], y - p[1]) <= p[2] + .5) G.seen[y][x] = true; });
+  }
+  function income(side) { var g = 1000; G.objs.forEach(function (o) { if (o.type === "mine" && o.owner === side) g += 500; }); return g; }
+  function eff(h, k) {
+    if (!h) return 0; var v = h[k] || 0, sets = {};
+    Object.keys(h.eq || {}).forEach(function (sl) { var a = ART[h.eq[sl]]; if (!a) return; v += a.fx[k] || 0; if (a.set) sets[a.set] = (sets[a.set] || 0) + 1; });
+    Object.keys(sets).forEach(function (st) { if (sets[st] >= SET[st].need) v += SET[st].fx[k] || 0; });
+    return v;
+  }
+  function maxMp(h) { return 12 + eff(h, "move"); }
+  function power(army, hero) { var p = 0; army.forEach(function (s) { var u = U[s.type]; p += s.n * u.hp * (1 + (u.atk + u.def + (hero ? eff(hero, "atk") + eff(hero, "def") : 0)) / 12) * (u.shots ? 1.3 : 1); }); return p * (1 + (hero ? eff(hero, "dmgPct") : 0) / 200); }
+  function slotFor(h, a) { if (a.slot !== "ring") return a.slot; if (!h.eq.ring1) return "ring1"; if (!h.eq.ring2) return "ring2"; return "ring1"; }
+  function equip(h, id) {
+    var a = ART[id], sl = slotFor(h, a), i = h.bag.indexOf(id); if (i >= 0) h.bag.splice(i, 1);
+    if (h.eq[sl]) h.bag.push(h.eq[sl]); h.eq[sl] = id;
+  }
+  function unequip(h, sl) { if (h.eq[sl]) { h.bag.push(h.eq[sl]); delete h.eq[sl]; } }
+  function pickUp(h, id) {
+    var a = ART[id], sl = slotFor(h, a);
+    if (!h.eq[sl]) { h.eq[sl] = id; } else h.bag.push(id);
+    if (h.side === "b") { sfx("level"); quest("art"); }
+    if (h.side === "b") toast(RAR[a.r][0].toUpperCase() + RAR[a.r].slice(1) + " артефакт: " + a.name + " (" + fxText(a) + ")");
+  }
+  function ownedAnywhere(id) { var f = false; ["b", "r"].forEach(function (s) { var h = G.heroes[s]; if (h.bag.indexOf(id) >= 0) f = true; Object.keys(h.eq).forEach(function (k) { if (h.eq[k] === id) f = true; }); }); G.objs.forEach(function (o) { if (o.type === "art" && !o.gone && o.id === id) f = true; }); return f; }
+  function mergeArmy(list) { var out = []; list.forEach(function (s) { if (s.n <= 0) return; var e = out.filter(function (o) { return o.type === s.type; })[0]; if (e) e.n += s.n; else out.push({ type: s.type, n: s.n }); }); return out; }
+
+  // ================= map pathfinding =================
+  function findPath(h, tx, ty) {
+    var other = G.heroes[h.side === "b" ? "r" : "b"];
+    var key = function (x, y) { return y * COLS + x; };
+    var prev = {}; prev[key(h.x, h.y)] = -1; var q = [[h.x, h.y]];
+    while (q.length) {
+      var c = q.shift();
+      if (c[0] === tx && c[1] === ty) break;
+      var isStart = c[0] === h.x && c[1] === h.y;
+      var stuck = !isStart && isStopper(h, c[0], c[1], other);
+      for (var dx = -1; dx <= 1; dx++) for (var dy = -1; dy <= 1; dy++) {
+        if (!dx && !dy) continue; var nx = c[0] + dx, ny = c[1] + dy, k = key(nx, ny);
+        if (stuck && !(nx === tx && ny === ty)) continue;
+        if (k in prev || !terrainOk(nx, ny)) continue;
+        prev[k] = key(c[0], c[1]); q.push([nx, ny]);
+      }
+    }
+    if (!(key(tx, ty) in prev) || (tx === h.x && ty === h.y)) return [];
+    var out = [], cur = key(tx, ty);
+    while (cur !== key(h.x, h.y)) { out.unshift([cur % COLS, Math.floor(cur / COLS)]); cur = prev[cur]; }
+    return out;
+  }
+  function isStopper(h, x, y, other) {
+    if (other.alive && other.x === x && other.y === y) return true;
+    if (guardOf(x, y)) return true;
+    var o = objAt(x, y);
+    if (o && !(o.type === "castle" && o.side === h.side)) return true;
+    return false;
+  }
+
+  // ================= drawing =================
+  var mc = $("map"), mx = mc.getContext("2d");
+  var decoR = rng(9), deco = []; for (var i = 0; i < COLS * ROWS; i++) deco.push([decoR(), decoR(), decoR()]);
+  function drawFlagman(ctx, x, y, s, color) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+    ctx.fillStyle = "rgba(0,0,0,.35)"; ctx.beginPath(); ctx.ellipse(0, 12, 14, 4, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = "#6b4a2e"; ctx.beginPath(); ctx.ellipse(0, 4, 12, 6, 0, 0, 7); ctx.fill();
+    ctx.fillRect(-10, 6, 3, 8); ctx.fillRect(7, 6, 3, 8);
+    ctx.beginPath(); ctx.moveTo(9, 2); ctx.lineTo(16, -6); ctx.lineTo(18, -3); ctx.lineTo(12, 5); ctx.fill();
+    ctx.fillStyle = color; ctx.fillRect(-4, -10, 8, 12);
+    ctx.fillStyle = "#e8c9a0"; ctx.beginPath(); ctx.arc(0, -13, 4, 0, 7); ctx.fill();
+    ctx.strokeStyle = "#ddd"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(-6, 6); ctx.lineTo(-6, -26); ctx.stroke();
+    ctx.fillStyle = color; ctx.beginPath(); ctx.moveTo(-6, -26); ctx.lineTo(8, -22); ctx.lineTo(-6, -17); ctx.fill();
+    ctx.restore();
+  }
+  function drawCastle(ctx, x, y, s, color) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+    ctx.fillStyle = "rgba(0,0,0,.35)"; ctx.fillRect(-26, 18, 54, 6);
+    ctx.fillStyle = "#9c937f"; ctx.fillRect(-24, -6, 48, 26);
+    ctx.fillStyle = "#b8ae97"; ctx.fillRect(-28, -18, 12, 38); ctx.fillRect(16, -18, 12, 38); ctx.fillRect(-7, -28, 14, 30);
+    ctx.fillStyle = "#3b2a1c"; ctx.beginPath(); ctx.moveTo(-6, 20); ctx.lineTo(-6, 10); ctx.arc(0, 10, 6, Math.PI, 0); ctx.lineTo(6, 20); ctx.fill();
+    ctx.fillStyle = color; ctx.beginPath(); ctx.moveTo(-7, -28); ctx.lineTo(0, -42); ctx.lineTo(7, -28); ctx.fill();
+    ctx.fillStyle = color; ctx.fillRect(0, -54, 11, 6); ctx.strokeStyle = "#ddd"; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(0, -42); ctx.lineTo(0, -54); ctx.stroke();
+    ctx.restore();
+  }
+  function unitIcon(ctx, cx, cy, r, kind, color) {
+    ctx.save(); ctx.translate(cx, cy);
+    ctx.fillStyle = "rgba(0,0,0,.35)"; ctx.beginPath(); ctx.ellipse(0, r * .75, r * .8, r * .25, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = color;
+    if (kind === "sword") { ctx.fillRect(-r * .35, -r * .4, r * .7, r * .9); ctx.fillStyle = "#cfd3da"; ctx.fillRect(r * .4, -r * 1.1, r * .12, r * 1.4); ctx.fillStyle = "#e8c9a0"; ctx.beginPath(); ctx.arc(0, -r * .6, r * .28, 0, 7); ctx.fill(); ctx.fillStyle = "#9aa0aa"; ctx.fillRect(-r * .7, -r * .3, r * .35, r * .6); }
+    else if (kind === "bow") { ctx.fillRect(-r * .3, -r * .4, r * .6, r * .9); ctx.fillStyle = "#e8c9a0"; ctx.beginPath(); ctx.arc(0, -r * .6, r * .26, 0, 7); ctx.fill(); ctx.strokeStyle = "#8a5a2b"; ctx.lineWidth = r * .1; ctx.beginPath(); ctx.arc(r * .35, -r * .1, r * .55, -1.2, 1.2); ctx.stroke(); }
+    else if (kind === "griffin") { ctx.beginPath(); ctx.ellipse(0, 0, r * .6, r * .35, 0, 0, 7); ctx.fill(); ctx.fillStyle = "#c9a15a"; ctx.beginPath(); ctx.moveTo(-r * .2, -r * .1); ctx.lineTo(-r * .9, -r * .9); ctx.lineTo(r * .1, -r * .3); ctx.fill(); ctx.beginPath(); ctx.moveTo(r * .2, -r * .1); ctx.lineTo(r * .8, -r * .95); ctx.lineTo(r * .45, -r * .1); ctx.fill(); ctx.fillStyle = "#eee"; ctx.beginPath(); ctx.arc(r * .6, -r * .2, r * .2, 0, 7); ctx.fill(); }
+    else if (kind === "skel") { ctx.fillStyle = "#ddd8c8"; ctx.fillRect(-r * .1, -r * .3, r * .2, r * .8); ctx.beginPath(); ctx.arc(0, -r * .55, r * .3, 0, 7); ctx.fill(); ctx.fillStyle = "#222"; ctx.fillRect(-r * .15, -r * .6, r * .1, r * .1); ctx.fillRect(r * .05, -r * .6, r * .1, r * .1); ctx.fillStyle = color; ctx.fillRect(-r * .6, -r * .2, r * .35, r * .6); }
+    else if (kind === "ghost") { ctx.globalAlpha = .9; ctx.fillStyle = "#b9c8d8"; ctx.beginPath(); ctx.arc(0, -r * .2, r * .5, Math.PI, 0); ctx.lineTo(r * .5, r * .5); for (var i = 0; i < 4; i++) ctx.lineTo(r * .5 - (i + .5) * r * .25, r * (i % 2 ? .5 : .3)); ctx.lineTo(-r * .5, r * .5); ctx.fill(); ctx.globalAlpha = 1; ctx.fillStyle = color; ctx.beginPath(); ctx.arc(-r * .15, -r * .25, r * .08, 0, 7); ctx.arc(r * .15, -r * .25, r * .08, 0, 7); ctx.fill(); }
+    else if (kind === "wolf") { ctx.fillStyle = "#77757c"; ctx.beginPath(); ctx.ellipse(-r * .1, 0, r * .55, r * .3, 0, 0, 7); ctx.fill(); ctx.beginPath(); ctx.moveTo(r * .3, -r * .15); ctx.lineTo(r * .8, -r * .5); ctx.lineTo(r * .75, r * .05); ctx.fill(); ctx.beginPath(); ctx.moveTo(r * .45, -r * .35); ctx.lineTo(r * .5, -r * .7); ctx.lineTo(r * .6, -r * .4); ctx.fill(); ctx.fillRect(-r * .5, r * .1, r * .12, r * .45); ctx.fillRect(r * .15, r * .1, r * .12, r * .45); ctx.fillStyle = color; ctx.fillRect(-r * .35, -r * .35, r * .3, r * .1); }
+    else { ctx.beginPath(); ctx.moveTo(0, -r * .9); ctx.lineTo(r * .5, r * .5); ctx.lineTo(-r * .5, r * .5); ctx.fill(); ctx.fillStyle = "#ddd8c8"; ctx.beginPath(); ctx.arc(0, -r * .55, r * .22, 0, 7); ctx.fill(); ctx.fillStyle = "#7fd1ff"; ctx.beginPath(); ctx.arc(r * .55, -r * .5, r * .14, 0, 7); ctx.fill(); }
+    ctx.restore();
+  }
+  function drawMap() {
+    var cols = { ".": ["#5e8a3c", "#64903f"], F: ["#3e6b2e", "#437232"], M: ["#7c7a6e", "#838175"], W: ["#2f6690", "#336c96"] };
+    for (var y = 0; y < ROWS; y++) for (var x = 0; x < COLS; x++) {
+      var t = TERRAIN[y][x], d = deco[y * COLS + x], cx = x * T + T / 2, cy = y * T + T / 2;
+      mx.fillStyle = cols[t][(x + y) % 2]; mx.fillRect(x * T, y * T, T, T);
+      if (t === "." && d[0] < .35) { mx.fillStyle = "#79a650"; mx.fillRect(x * T + d[1] * 34, y * T + d[2] * 34, 4, 4); }
+      if (t === "F") for (var k = 0; k < 3; k++) { var ox = (k - 1) * 11, oy = (k % 2) * 7; mx.fillStyle = "#24461c"; mx.beginPath(); mx.moveTo(cx + ox, cy - 17 + oy); mx.lineTo(cx + ox + 9, cy + 7 + oy); mx.lineTo(cx + ox - 9, cy + 7 + oy); mx.fill(); }
+      if (t === "M") { mx.fillStyle = "#5b5a52"; mx.beginPath(); mx.moveTo(cx - 19, cy + 14); mx.lineTo(cx - 3, cy - 16); mx.lineTo(cx + 12, cy + 14); mx.fill(); mx.fillStyle = "#e9e6dc"; mx.beginPath(); mx.moveTo(cx - 7, cy - 7); mx.lineTo(cx - 3, cy - 16); mx.lineTo(cx + 1, cy - 7); mx.fill(); }
+      if (t === "W" && d[0] < .5) { mx.strokeStyle = "#5c93bf"; mx.lineWidth = 2; mx.beginPath(); mx.arc(cx - 5, cy, 5, 3.6, 5.8); mx.arc(cx + 5, cy, 5, 3.6, 5.8); mx.stroke(); }
+    }
+    G.objs.forEach(function (o) {
+      if (o.gone) return; var cx = o.x * T + T / 2, cy = o.y * T + T / 2;
+      if (o.type === "castle") drawCastle(mx, cx, cy - 2, .8, o.side === "b" ? C.blue : C.red);
+      if (o.type === "mine") { mx.fillStyle = "#5a4a3a"; mx.beginPath(); mx.moveTo(cx - 17, cy + 14); mx.lineTo(cx, cy - 12); mx.lineTo(cx + 17, cy + 14); mx.fill(); mx.fillStyle = "#1b120b"; mx.fillRect(cx - 6, cy + 2, 12, 12); mx.fillStyle = "#e3c14b"; mx.beginPath(); mx.arc(cx + 12, cy + 11, 4, 0, 7); mx.fill(); if (o.owner) { mx.fillStyle = o.owner === "b" ? C.blue : C.red; mx.fillRect(cx - 1, cy - 22, 9, 6); mx.fillStyle = "#ddd"; mx.fillRect(cx - 2, cy - 22, 1.5, 12); } }
+      if (o.type === "chest") { mx.fillStyle = "#7a4a22"; mx.fillRect(cx - 10, cy - 3, 20, 12); mx.fillStyle = "#94592a"; mx.fillRect(cx - 10, cy - 9, 20, 7); mx.fillStyle = "#e3c14b"; mx.fillRect(cx - 2, cy - 4, 4, 5); }
+      if (o.type === "art") drawArt(mx, cx, cy, o.id);
+      if (o.type === "monster") { var a = o.army[0]; unitIcon(mx, cx, cy, 16, U[a.type].icon, "#6c6a70"); mx.fillStyle = "#000b"; mx.fillRect(cx - 13, cy + 10, 26, 12); mx.fillStyle = C.text; mx.font = "bold 10px sans-serif"; mx.textAlign = "center"; mx.fillText(approx(a.n), cx, cy + 19); }
+    });
+    G.path.forEach(function (p, i) { var cx = p[0] * T + T / 2, cy = p[1] * T + T / 2; mx.fillStyle = i < G.heroes.b.mp ? "#7ee06b" : "#e0625a"; if (i === G.path.length - 1) { mx.strokeStyle = mx.fillStyle; mx.lineWidth = 4; mx.beginPath(); mx.moveTo(cx - 7, cy - 7); mx.lineTo(cx + 7, cy + 7); mx.moveTo(cx + 7, cy - 7); mx.lineTo(cx - 7, cy + 7); mx.stroke(); } else { mx.beginPath(); mx.arc(cx, cy, 4, 0, 7); mx.fill(); } });
+    ["r", "b"].forEach(function (s) { var h = G.heroes[s]; if (h.alive) drawFlagman(mx, h.x * T + T / 2, h.y * T + T / 2 + 3, .95, s === "b" ? C.blue : C.red); });
+    for (var y2 = 0; y2 < ROWS; y2++) for (var x2 = 0; x2 < COLS; x2++) if (!G.seen[y2][x2]) { mx.fillStyle = "#07080b"; mx.fillRect(x2 * T, y2 * T, T, T); }
+  }
+  var RCOL = ["rgba(230,220,190,.35)", "rgba(95,163,224,.45)", "rgba(181,123,224,.5)", "rgba(240,166,74,.6)"];
+  function drawArt(ctx, cx, cy, id) {
+    var a = ART[id]; ctx.fillStyle = RCOL[a.r]; ctx.beginPath(); ctx.arc(cx, cy, 16, 0, 7); ctx.fill();
+    var sl = a.slot;
+    if (sl === "weapon") { ctx.fillStyle = a.set ? "#9aa0a8" : "#dfe3ea"; ctx.fillRect(cx - 2, cy - 14, 4, 20); ctx.fillStyle = "#d9a946"; ctx.fillRect(cx - 7, cy + 4, 14, 3); }
+    else if (sl === "shield") { ctx.fillStyle = "#b9862f"; ctx.beginPath(); ctx.moveTo(cx - 10, cy - 10); ctx.lineTo(cx + 10, cy - 10); ctx.lineTo(cx + 8, cy + 4); ctx.lineTo(cx, cy + 12); ctx.lineTo(cx - 8, cy + 4); ctx.fill(); }
+    else if (sl === "ring") { ctx.strokeStyle = "#e3c14b"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(cx, cy + 2, 7, 0, 7); ctx.stroke(); ctx.fillStyle = a.r ? "#7fd1ff" : "#e05a7a"; ctx.beginPath(); ctx.arc(cx, cy - 6, 3.5, 0, 7); ctx.fill(); }
+    else if (sl === "head") { ctx.fillStyle = a.set ? "#8d8f98" : "#e3c14b"; ctx.beginPath(); ctx.moveTo(cx - 10, cy + 6); ctx.lineTo(cx - 10, cy - 4); ctx.lineTo(cx - 5, cy + 1); ctx.lineTo(cx, cy - 9); ctx.lineTo(cx + 5, cy + 1); ctx.lineTo(cx + 10, cy - 4); ctx.lineTo(cx + 10, cy + 6); ctx.fill(); }
+    else if (sl === "torso") { ctx.fillStyle = a.set ? "#8d8f98" : "#a07a4a"; ctx.fillRect(cx - 8, cy - 8, 16, 18); ctx.fillRect(cx - 12, cy - 8, 4, 8); ctx.fillRect(cx + 8, cy - 8, 4, 8); }
+    else if (sl === "feet") { ctx.fillStyle = "#6b4a2e"; ctx.fillRect(cx - 9, cy - 8, 6, 14); ctx.fillRect(cx - 9, cy + 3, 10, 5); ctx.fillRect(cx + 2, cy - 8, 6, 14); ctx.fillRect(cx + 2, cy + 3, 10, 5); }
+    else if (sl === "neck") { ctx.strokeStyle = "#e3c14b"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(cx, cy - 6, 8, .2, Math.PI - .2); ctx.stroke(); ctx.fillStyle = a.r === 3 ? "#7fd1ff" : "#6fae5a"; ctx.beginPath(); ctx.arc(cx, cy + 5, 6, 0, 7); ctx.fill(); }
+    else { ctx.fillStyle = "#4a7cc4"; ctx.beginPath(); ctx.moveTo(cx - 9, cy - 10); ctx.lineTo(cx + 9, cy - 10); ctx.lineTo(cx + 12, cy + 12); ctx.lineTo(cx - 12, cy + 12); ctx.fill(); }
+  }
+  function approx(n) { return n < 5 ? "мало" : n < 10 ? "5–9" : n < 20 ? "10–19" : n < 50 ? "20–49" : "50+"; }
+
+  // ================= UI =================
+  var toastT;
+  function toast(msg) { var t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(function () { t.hidden = true; }, 2200); }
+  function hint(msg) { $("hint").textContent = msg; }
+  function week() { return Math.floor((G.day - 1) / 7) + 1; }
+  function updateUI() {
+    var h = G.heroes.b;
+    $("gold").textContent = G.gold.b.toLocaleString("ru-RU"); $("income").textContent = income("b").toLocaleString("ru-RU");
+    $("dayLbl").textContent = "Неделя " + week() + ", день " + ((G.day - 1) % 7 + 1);
+    $("lvl").textContent = h.lvl; $("atk").textContent = eff(h, "atk"); $("def").textContent = eff(h, "def"); $("pow").textContent = eff(h, "pow"); $("mp").textContent = h.mp; $("exp").textContent = h.exp + "/" + h.lvl * 300;
+    $("armyLbl").innerHTML = h.army.map(function (s) { return "<span>" + U[s.type].name + " " + s.n + "</span>"; }).join("");
+    var c = G.objs[0]; $("castleBtn").disabled = !(h.x === c.x && h.y === c.y);
+    $("heroBtn").textContent = h.bag.length ? "Герой (" + h.bag.length + ")" : "Герой";
+    $("questBtn").textContent = "Задания " + Object.keys(G.quests || {}).length + "/" + QUESTS.length;
+  }
+  function closePanel() { $("overlay").hidden = true; }
+  function openPanel(html) { $("panel").innerHTML = html; $("overlay").hidden = false; }
+
+  // ================= map input =================
+  mc.addEventListener("click", function (e) {
+    if (G.over || G.busy) return;
+    var rect = mc.getBoundingClientRect(), x = Math.floor((e.clientX - rect.left) / rect.width * COLS), y = Math.floor((e.clientY - rect.top) / rect.height * ROWS);
+    if (x < 0 || y < 0 || x >= COLS || y >= ROWS) return;
+    var h = G.heroes.b;
+    if (!G.seen[y][x]) { toast("Там туман. Подойдите ближе."); return; }
+    var last = G.path[G.path.length - 1];
+    if (last && last[0] === x && last[1] === y) { walk(); return; }
+    G.path = findPath(h, x, y);
+    if (!G.path.length) { toast("Туда не пройти."); drawMap(); return; }
+    var g = guardOf(x, y), o = objAt(x, y), oh = heroAt(x, y);
+    var what = oh && oh.side === "r" ? "Вражеский герой Моргот, бой" : g ? "Охрана: " + U[g.army[0].type].name.toLowerCase() + ", " + approx(g.army[0].n) + ", бой" : o ? ({ chest: "Сундук: +1 000 золота", mine: "Золотой рудник: +500 в день", art: o.type === "art" ? ART[o.id].name + " (" + RAR[ART[o.id].r] + "): " + fxText(ART[o.id]) : "", castle: o.side === "b" ? "Ваш замок" : "Замок врага. Захватите его!" })[o.type] : "";
+    hint((what ? what + ". " : "") + "Шагов: " + G.path.length + (G.path.length > h.mp ? ", сегодня дойдёте не до конца." : ". Нажмите ещё раз, чтобы идти."));
+    drawMap();
+  });
+
+  function walk() {
+    var h = G.heroes.b; if (!h.mp) { toast("Шаги на сегодня кончились. Нажмите «Конец дня»."); return; }
+    G.busy = true; var reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    (function step() {
+      if (!G.path.length || !h.mp) { G.busy = false; drawMap(); updateUI(); save(); checkLevelUp(); return; }
+      var s = G.path.shift(); h.x = s[0]; h.y = s[1]; h.mp--; reveal(); drawMap(); updateUI(); sfx("step");
+      var stop = arrive(h, function () { G.busy = false; drawMap(); updateUI(); save(); if ($("overlay").hidden) checkLevelUp(); });
+      if (stop) { G.path = []; return; }
+      setTimeout(step, reduce ? 0 : 110);
+    })();
+  }
+
+  // returns true if the move stops here (the callback will run later)
+  function arrive(h, done) {
+    var enemySide = h.side === "b" ? "r" : "b", other = G.heroes[enemySide];
+    if (other.alive && other.x === h.x && other.y === h.y) { heroBattle(h, other, done); return true; }
+    var g = guardOf(h.x, h.y);
+    if (g) { monsterBattle(h, g, function (won) { if (won) { var r = arrive(h, done); if (!r) done(); } else done(); }); return true; }
+    var o = objAt(h.x, h.y);
+    if (!o) return false;
+    if (o.type === "chest") { o.gone = true; G.gold[h.side] += 1000; if (h.side === "b") { toast("+1 000 золота"); sfx("coin"); quest("chest"); } return false; }
+    if (o.type === "mine") { if (o.owner !== h.side) { o.owner = h.side; if (h.side === "b") { toast("Рудник ваш: +500 золота в день"); sfx("coin"); quest("mine"); } else toast("Враг захватил рудник!"); } return false; }
+    if (o.type === "art") { o.gone = true; pickUp(h, o.id); updateUI(); return false; }
+    if (o.type === "castle" && o.side === h.side) { if (h.side === "b" && G.path.length) return false; if (h.side === "b") { G.path = []; openCastle(); } return h.side === "b" ? (done(), true) : false; }
+    if (o.type === "castle" && o.side !== h.side) {
+      if (h.side === "b") {
+        var gar = mergeArmy(o.garrison || []);
+        if (gar.length) { startBattle(h, { name: "Гарнизон", army: gar, hero: null }, function (won, surv) { if (won) { o.garrison = []; endGame(true); } else { o.garrison = surv; } done(); }); return true; }
+        endGame(true); return true;
+      } else { endGame(false, "Моргот захватил ваш замок."); return true; }
+    }
+    return false;
+  }
+
+  function monsterBattle(h, m, cb) {
+    if (h.side === "b") {
+      startBattle(h, { name: U[m.army[0].type].name, army: mergeArmy(m.army), hero: null }, function (won, surv) {
+        if (won) { m.gone = true; quest("fight"); var pool = DROPS.filter(function (id) { return !ownedAnywhere(id); }); if (pool.length && Math.random() < .5) { var id = pool[Math.floor(Math.random() * pool.length)]; setTimeout(function () { pickUp(h, id); updateUI(); }, 900); } }
+        else m.army = surv; cb(won); });
+    } else {
+      var res = runHeadless(h.army, m.army, h, null);
+      h.army = res.b; if (res.won) { m.gone = true; gainExp(h, res.xp); } else { m.army = res.r; h.alive = false; h.army = []; toast("Нейтралы разбили вражеского героя!"); }
+      cb(res.won);
+    }
+  }
+  function heroBattle(att, def, done) {
+    var me = att.side === "b" ? att : def, foe = att.side === "b" ? def : att;
+    startBattle(me, { name: foe.name, army: foe.army, hero: foe }, function (won, surv) {
+      if (won) { foe.alive = false; foe.army = []; Object.keys(foe.eq).forEach(function (sl) { me.bag.push(foe.eq[sl]); }); foe.eq = {}; me.bag = me.bag.concat(foe.bag); foe.bag = []; toast("Моргот повержен! Его артефакты теперь ваши. Захватите его замок."); }
+      else foe.army = surv;
+      done();
+    });
+  }
+  function gainExp(h, xp) {
+    h.exp += Math.round(xp);
+    while (h.exp >= h.lvl * 300) {
+      h.exp -= h.lvl * 300; h.lvl++;
+      if (h.side === "b") G.pendingLv++;
+      else { var sk = SKILLS[Math.floor(Math.random() * 3)]; h[sk[0]] += sk[1]; }
+    }
+  }
+  function checkLevelUp() {
+    if (!G.pendingLv || G.over) return;
+    var h = G.heroes.b, pool = SKILLS.slice(), pick = [];
+    while (pick.length < 2) pick.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+    sfx("level");
+    openPanel('<h2>Уровень ' + (h.lvl - G.pendingLv + 1) + '</h2><p style="margin:0" class="fx">Выберите навык для Эльмиры.</p><div class="choice">' + pick.map(function (s, i) { return '<button class="btn ghost" data-sk="' + i + '">' + s[2] + '</button>'; }).join("") + '</div>');
+    $("panel").querySelectorAll("[data-sk]").forEach(function (b) { b.addEventListener("click", function () { var s = pick[+b.getAttribute("data-sk")]; h[s[0]] += s[1]; if (s[0] === "move") h.mp += s[1]; G.pendingLv--; closePanel(); if (h.lvl >= 3) quest("lvl3"); updateUI(); save(); checkLevelUp(); }); });
+  }
+
+  // ================= audio =================
+  var AC = null, snd = true, mus = false, musT = null;
+  try { var ap = JSON.parse(localStorage.getItem("korony-audio") || "{}"); if (ap.snd === false) snd = false; if (ap.mus) mus = true; } catch (e) {}
+  function saveAudio() { try { localStorage.setItem("korony-audio", JSON.stringify({ snd: snd, mus: mus })); } catch (e) {} }
+  function ac() { if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; } } if (AC.state === "suspended") AC.resume(); return AC; }
+  function tone(f, dur, type, vol, f2, delay) {
+    var a = ac(); if (!a) return; var t = a.currentTime + (delay || 0), o = a.createOscillator(), g = a.createGain();
+    o.type = type || "square"; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur);
+    g.gain.setValueAtTime(vol || .08, t); g.gain.exponentialRampToValueAtTime(.0001, t + dur); o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + dur + .02);
+  }
+  function noise(dur, vol, freq, delay) {
+    var a = ac(); if (!a) return; var t = a.currentTime + (delay || 0), len = Math.floor(a.sampleRate * dur), buf = a.createBuffer(1, len, a.sampleRate), d = buf.getChannelData(0);
+    for (var i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+    var src = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain(); src.buffer = buf; f.type = "lowpass"; f.frequency.value = freq || 1200; g.gain.value = vol || .15;
+    src.connect(f); f.connect(g); g.connect(a.destination); src.start(t);
+  }
+  function sfx(n) {
+    if (!snd) return;
+    if (n === "hit") { noise(.14, .22, 900); tone(120, .1, "square", .05, 60); }
+    else if (n === "shoot") { tone(1100, .16, "triangle", .06, 300); noise(.08, .08, 3000); }
+    else if (n === "bolt") { noise(.4, .3, 5000); tone(70, .35, "sawtooth", .08, 40); }
+    else if (n === "heal") { tone(520, .35, "sine", .08, 1040); tone(780, .3, "sine", .05, 1300, .08); }
+    else if (n === "coin") { tone(1320, .07, "square", .05); tone(1760, .12, "square", .05, 0, .07); }
+    else if (n === "step") tone(180, .03, "triangle", .025);
+    else if (n === "click") tone(640, .04, "triangle", .04);
+    else if (n === "build") { noise(.08, .2, 600); noise(.08, .2, 600, .15); tone(330, .2, "triangle", .05, 0, .3); }
+    else if (n === "level" || n === "win") [523, 659, 784, 1047].forEach(function (f, i) { tone(f, .25, "triangle", .07, 0, i * .11); });
+    else if (n === "lose") [392, 330, 262, 196].forEach(function (f, i) { tone(f, .35, "triangle", .07, 0, i * .18); });
+    else if (n === "death") tone(220, .3, "sawtooth", .04, 80);
+  }
+  var MEL = [220, 262, 294, 330, 392, 440, 523], mi = 0;
+  function musicTick() { if (!mus) return; var f = MEL[[0, 2, 4, 3, 5, 4, 2, 1, 0, 4, 6, 5, 4, 2, 3, 1][mi % 16]]; tone(f, .5, "triangle", .035); if (mi % 4 === 0) tone(f / 2, .9, "sine", .05); mi++; }
+  function setAudioUI() { $("sndBtn").classList.toggle("on", snd); $("musBtn").classList.toggle("on", mus); $("sndBtn").textContent = snd ? "Звук: вкл" : "Звук: выкл"; $("musBtn").textContent = mus ? "Музыка: вкл" : "Музыка: выкл"; }
+  $("sndBtn").addEventListener("click", function () { snd = !snd; saveAudio(); setAudioUI(); sfx("click"); });
+  $("musBtn").addEventListener("click", function () { mus = !mus; saveAudio(); setAudioUI(); clearInterval(musT); if (mus) { ac(); musT = setInterval(musicTick, 380); } });
+  setAudioUI();
+  document.addEventListener("pointerdown", function once() { if (mus && !musT) musT = setInterval(musicTick, 380); document.removeEventListener("pointerdown", once); });
+
+  // ================= quests =================
+  function quest(id) {
+    if (!G.quests || G.quests[id]) return; var q = QUESTS.filter(function (x) { return x[0] === id; })[0]; if (!q) return;
+    G.quests[id] = true; var h = G.heroes.b; if (q[2]) G.gold.b += q[2]; if (q[3]) gainExp(h, q[3]);
+    setTimeout(function () { toast("Задание выполнено: " + q[1] + (q[2] ? ". +" + q[2] + " золота" : "") + (q[3] ? ". +" + q[3] + " опыта" : "")); sfx("level"); }, 700);
+    updateUI();
+  }
+  function openQuests() {
+    openPanel('<h2>Задания</h2>' + QUESTS.map(function (q) { var d = G.quests[q[0]]; return '<div class="row"><div>' + (d ? "<s>" + q[1] + "</s>" : q[1]) + '<small>' + (q[2] ? "+" + q[2] + " золота " : "") + (q[3] ? "+" + q[3] + " опыта" : "") + (q[0] === "boss" ? "победа в партии" : "") + '</small></div><span class="fx" style="color:' + (d ? "var(--good)" : "var(--muted)") + '">' + (d ? "выполнено" : "в процессе") + '</span></div>'; }).join("") + '<button class="btn ghost" id="qClose">Закрыть</button>');
+    $("qClose").addEventListener("click", closePanel);
+  }
+  $("questBtn").addEventListener("click", function () { if (!G.over && !G.busy) openQuests(); });
+
+  // ================= hero screen =================
+  function openHero() {
+    var h = G.heroes.b, sets = {};
+    Object.keys(h.eq).forEach(function (sl) { var a = ART[h.eq[sl]]; if (a.set) sets[a.set] = (sets[a.set] || 0) + 1; });
+    var slots = SLOTS.map(function (s) { var id = h.eq[s[0]], a = id && ART[id];
+      return '<div class="slot"><span>' + s[1] + '</span>' + (a ? '<b class="r' + a.r + '">' + a.name + '</b><span class="fx">' + fxText(a) + '</span><button data-off="' + s[0] + '">Снять</button>' : '<span class="fx">пусто</span>') + '</div>'; }).join("");
+    var bag = h.bag.length ? h.bag.map(function (id, i) { var a = ART[id]; return '<div class="row"><div><b class="r' + a.r + '">' + a.name + '</b><small>' + RAR[a.r] + ' · ' + fxText(a) + '</small></div><button class="btn ghost" data-on="' + i + '">Надеть</button></div>'; }).join("") : '<p class="fx" style="margin:0">Рюкзак пуст. Ищите артефакты на карте.</p>';
+    var setLine = Object.keys(SET).map(function (k) { var n = sets[k] || 0; return '<div class="fx">' + SET[k].name + ': ' + n + ' из ' + SET[k].need + (n >= SET[k].need ? ', активен: ' : ', даст: ') + SET[k].desc + '</div>'; }).join("");
+    openPanel('<h2>Эльмира, уровень ' + h.lvl + '</h2><div class="fx">Атака ' + eff(h, "atk") + ' · Защита ' + eff(h, "def") + ' · Магия ' + eff(h, "pow") + ' · Удача ' + eff(h, "luck") + ' · Мораль ' + eff(h, "morale") + ' · Скорость отрядов +' + eff(h, "spd") + ' · Шагов ' + maxMp(h) + '</div><div class="slots">' + slots + '</div>' + setLine + '<h2 style="font-size:18px">Рюкзак</h2>' + bag + '<button class="btn ghost" id="closeHero">Закрыть</button>');
+    $("panel").querySelectorAll("[data-off]").forEach(function (b) { b.addEventListener("click", function () { unequip(h, b.getAttribute("data-off")); fixMp(h); updateUI(); save(); openHero(); }); });
+    $("panel").querySelectorAll("[data-on]").forEach(function (b) { b.addEventListener("click", function () { equip(h, h.bag[+b.getAttribute("data-on")]); fixMp(h); updateUI(); save(); openHero(); }); });
+    $("closeHero").addEventListener("click", closePanel);
+  }
+  function fixMp(h) { if (h.mp > maxMp(h)) h.mp = maxMp(h); }
+  $("heroBtn").addEventListener("click", function () { if (!G.over && !G.busy) openHero(); });
+  $("newBtn").addEventListener("click", function () { if (!G.busy || G.over) newGame(); else toast("Дождитесь конца хода или боя."); });
+
+  // ================= castle =================
+  function openCastle() {
+    var c = G.growth, h = G.heroes.b;
+    var rows = ["pike", "archer", "griffin"].map(function (t) {
+      var u = U[t], avail = c[t], can = Math.min(avail, Math.floor(G.gold.b / u.cost));
+      var locked = t === "griffin" && !G.built.tower;
+      return '<div class="row"><div>' + u.name + '<small>' + (locked ? "нужна Грифонья башня" : "доступно " + avail + " · " + u.cost + " зол. · атака " + u.atk + ", защита " + u.def + ", здоровье " + u.hp + (u.ab ? " · " + u.ab : "")) + '</small></div><button class="btn" data-hire="' + t + '"' + (locked || !can ? " disabled" : "") + '>Нанять ' + (can || "") + '</button></div>';
+    }).join("");
+    var builds = Object.keys(BUILD).map(function (k) { var b = BUILD[k], has = G.built[k];
+      return '<div class="row"><div>' + b.name + '<small>' + (has ? "построено" : b.desc + (G.builtToday ? " · сегодня уже строили" : "")) + '</small></div><button class="btn ghost" data-build="' + k + '"' + (has || G.builtToday || G.gold.b < b.cost ? " disabled" : "") + '>' + (has ? "Есть" : b.cost.toLocaleString("ru-RU") + " зол.") + '</button></div>'; }).join("");
+    var ups = h.army.filter(function (st) { return UPG[st.type]; }).map(function (st) { var up = UPG[st.type], n = Math.min(st.n, Math.floor(G.gold.b / up[1]));
+      return '<div class="row"><div>' + U[st.type].name + ' ' + st.n + ' → ' + U[up[0]].name + '<small>' + up[1] + ' зол. за воина · ' + 'атака ' + U[up[0]].atk + ', скорость ' + U[up[0]].spd + '</small></div><button class="btn ghost" data-up="' + st.type + '"' + (!G.built.forge || !n ? " disabled" : "") + '>' + (G.built.forge ? "Улучшить " + (n || "") : "нужна Кузница") + '</button></div>'; }).join("");
+    openPanel('<h2>Замок Сторожевой</h2><div class="row"><span>Золото</span><b>' + G.gold.b.toLocaleString("ru-RU") + '</b></div><div class="h2s fx">Найм</div>' + rows + '<div class="fx">Постройки (одна в день)</div>' + builds + (ups ? '<div class="fx">Кузница: улучшение отрядов</div>' + ups : "") + '<button class="btn ghost" id="closeCastle">Закрыть</button>');
+    $("panel").querySelectorAll("[data-hire]").forEach(function (b) { b.addEventListener("click", function () {
+      var t = b.getAttribute("data-hire"), u = U[t], n = Math.min(c[t], Math.floor(G.gold.b / u.cost));
+      if (h.army.length >= 5 && !h.army.some(function (s) { return s.type === t; })) { toast("В армии не больше 5 отрядов."); return; }
+      c[t] -= n; G.gold.b -= n * u.cost; h.army = mergeArmy(h.army.concat([{ type: t, n: n }])); sfx("coin"); updateUI(); save(); openCastle();
+    }); });
+    $("panel").querySelectorAll("[data-build]").forEach(function (b) { b.addEventListener("click", function () {
+      var k = b.getAttribute("data-build"); G.built[k] = true; G.builtToday = true; G.gold.b -= BUILD[k].cost; if (k === "tower") G.growth.griffin += 3;
+      sfx("build"); quest("build"); updateUI(); save(); openCastle();
+    }); });
+    $("panel").querySelectorAll("[data-up]").forEach(function (b) { b.addEventListener("click", function () {
+      var t = b.getAttribute("data-up"), up = UPG[t], st = h.army.filter(function (x) { return x.type === t; })[0], n = Math.min(st.n, Math.floor(G.gold.b / up[1]));
+      st.n -= n; G.gold.b -= n * up[1]; h.army = mergeArmy(h.army.concat([{ type: up[0], n: n }])); sfx("build"); quest("upgrade"); updateUI(); save(); openCastle();
+    }); });
+    $("closeCastle").addEventListener("click", closePanel);
+  }
+  $("castleBtn").addEventListener("click", function () { if (!G.over) openCastle(); });
+
+  // ================= day / AI =================
+  $("endBtn").addEventListener("click", function () {
+    if (G.over || G.busy) return;
+    G.busy = true; G.path = []; hint("Моргот делает ход…");
+    aiTurn(function () {
+      if (G.over) return;
+      G.day++; G.gold.b += income("b"); G.gold.r += income("r");
+      if ((G.day - 1) % 7 === 0) {
+        G.growth.pike += 10; G.growth.archer += 6; if (G.built.tower) G.growth.griffin += 3;
+        G.rGrowth.skel += 12; G.rGrowth.ghost += 5; if (week() >= 2) G.rGrowth.lich += 2;
+        toast("Новая неделя! В замке новые войска.");
+      }
+      aiRecruit();
+      G.builtToday = false; G.heroes.b.mp = maxMp(G.heroes.b); G.heroes.r.mp = maxMp(G.heroes.r); G.busy = false;
+      var r = G.heroes.r, c = G.objs[0];
+      if (r.alive && Math.max(Math.abs(r.x - c.x), Math.abs(r.y - c.y)) <= 5) toast("Моргот рядом с вашим замком!");
+      hint("День " + ((G.day - 1) % 7 + 1) + ". Доход +" + income("b").toLocaleString("ru-RU") + " золота.");
+      drawMap(); updateUI(); save();
+    });
+  });
+  function aiRecruit() {
+    var h = G.heroes.r; if (!h.alive) return;
+    ["lich", "ghost", "skel"].forEach(function (t) { var n = Math.min(G.rGrowth[t], Math.floor(G.gold.r / U[t].cost)); if (n > 0) { G.rGrowth[t] -= n; G.gold.r -= n * U[t].cost; h.army = mergeArmy(h.army.concat([{ type: t, n: n }])); } });
+  }
+  function aiTurn(done) {
+    var h = G.heroes.r, me = G.heroes.b;
+    if (!h.alive) { done(); return; }
+    var myP = power(h.army, h), best = null;
+    function consider(x, y, value) { var p = findPath(h, x, y); if (!p.length) return; var score = value - p.length * 60; if (!best || score > best.score) best = { path: p, score: score }; }
+    G.objs.forEach(function (o) {
+      if (o.gone) return;
+      var g = guardOf(o.x, o.y);
+      if (g && o.type !== "monster" && power(g.army) * 1.3 > myP) return;
+      if (o.type === "chest") consider(o.x, o.y, 1000);
+      if (o.type === "mine" && o.owner !== "r") consider(o.x, o.y, 1400);
+      if (o.type === "art") consider(o.x, o.y, 1500);
+      if (o.type === "monster" && myP > power(o.army) * 1.5) consider(o.x, o.y, 700);
+      if (o.type === "castle" && o.side === "b" && G.day >= 8 && (!me.alive || myP > power(me.army, me) * 1.2 || Math.max(Math.abs(me.x - o.x), Math.abs(me.y - o.y)) > 6)) consider(o.x, o.y, 5000);
+    });
+    if (me.alive && G.day >= 5 && myP > power(me.army, me) * 1.5) consider(me.x, me.y, 3000);
+    if (!best) { done(); return; }
+    var steps = best.path.slice(0, h.mp);
+    (function step() {
+      if (!steps.length || G.over) { done(); return; }
+      var s = steps.shift(); h.x = s[0]; h.y = s[1]; h.mp--;
+      if (G.seen[h.y][h.x]) drawMap();
+      var stopped = arrive(h, function () { drawMap(); updateUI(); done(); });
+      if (stopped) return;
+      setTimeout(step, G.seen[h.y][h.x] ? 120 : 0);
+    })();
+  }
+
+  function endGame(win, why) {
+    G.over = true; G.busy = false; try { localStorage.removeItem(SAVE); } catch (e) {} sfx(win ? "win" : "lose"); if (win) G.quests.boss = true;
+    $("battle").hidden = true; $("map").hidden = false; $("battleBar").hidden = true; $("mapBar").hidden = false; drawMap();
+    openPanel('<h2>' + (win ? "Победа!" : "Поражение") + '</h2><p style="margin:0">' + (win ? "Замок Моргота ваш. Прошло дней: " + G.day + "." : (why || "Ваш герой пал.")) + '</p><button class="btn" id="again">Новая игра</button>');
+    $("again").addEventListener("click", newGame);
+  }
+
+  // ================= battle engine =================
+  var HC = 8, HR = 11, R = 34, HW = Math.sqrt(3) * R, OX = (600 - 7.5 * HW) / 2, OY = 42;
+  function hexCenter(c, r) { return [OX + c * HW + (r % 2 ? HW / 2 : 0), OY + r * R * 1.5]; }
+  function toCube(c, r) { var q = c - (r - (r & 1)) / 2; return [q, r, -q - r]; }
+  function hexDist(a, b) { var A = toCube(a[0], a[1]), B = toCube(b[0], b[1]); return Math.max(Math.abs(A[0] - B[0]), Math.abs(A[1] - B[1]), Math.abs(A[2] - B[2])); }
+  function neighbors(c, r) {
+    var d = r % 2 ? [[1, 0], [-1, 0], [0, -1], [1, -1], [0, 1], [1, 1]] : [[1, 0], [-1, 0], [-1, -1], [0, -1], [-1, 1], [0, 1]];
+    return d.map(function (v) { return [c + v[0], r + v[1]]; }).filter(function (p) { return p[0] >= 0 && p[1] >= 0 && p[0] < HC && p[1] < HR; });
+  }
+  function makeBattle(bArmy, rArmy, bHero, rHero) {
+    var B = { ev: [], stacks: [], obstacles: [], round: 1, queue: [], bHero: bHero, rHero: rHero, spellUsed: { b: false, r: false }, over: false, log: "" };
+    var colsB = [1, 3, 5, 7, 0], colsR = [0, 2, 4, 6, 7];
+    bArmy.forEach(function (s, i) { B.stacks.push(mkStack(s, "b", colsB[i % 5], HR - 1)); });
+    rArmy.forEach(function (s, i) { B.stacks.push(mkStack(s, "r", colsR[i % 5], 0)); });
+    var orr = rng(G.day * 31 + bArmy.length * 7 + rArmy.length);
+    for (var k = 0; k < 4; k++) { var c = Math.floor(orr() * HC), r = 3 + Math.floor(orr() * 5); if (!B.obstacles.some(function (o) { return o[0] === c && o[1] === r; })) B.obstacles.push([c, r]); }
+    newRound(B);
+    return B;
+  }
+  function mkStack(s, side, c, r) { var u = U[s.type]; return { type: s.type, n: s.n, top: u.hp, side: side, c: c, r: r, shots: u.shots || 0, retal: true, defending: false, startN: s.n }; }
+  function alive(B, side) { return B.stacks.filter(function (s) { return s.n > 0 && (!side || s.side === side); }); }
+  function spdOf(B, s) { return U[s.type].spd + eff(heroOf(B, s.side), "spd") + (s.haste ? 2 : 0); }
+  function newRound(B) {
+    B.stacks.forEach(function (s) { s.retal = true; s.haste = false; s.moraled = false; });
+    B.queue = alive(B).slice().sort(function (a, b) { return spdOf(B, b) - spdOf(B, a) || (a.side === "b" ? -1 : 1); });
+    B.spellUsed = { b: false, r: false };
+  }
+  function nextStack(B) {
+    while (true) {
+      if (!B.queue.length) { B.round++; newRound(B); }
+      var s = B.queue.shift(); if (s.n > 0) { s.defending = false; return s; }
+    }
+  }
+  function blocked(B, c, r, self) {
+    if (B.obstacles.some(function (o) { return o[0] === c && o[1] === r; })) return true;
+    return B.stacks.some(function (s) { return s !== self && s.n > 0 && s.c === c && s.r === r; });
+  }
+  function reach(B, s) {
+    var u = U[s.type], sp = spdOf(B, s), out = {}; out[s.c + "," + s.r] = 0;
+    if (u.fly) { for (var r = 0; r < HR; r++) for (var c = 0; c < HC; c++) { var d = hexDist([s.c, s.r], [c, r]); if (d <= sp && !blocked(B, c, r, s)) out[c + "," + r] = d; } return out; }
+    var q = [[s.c, s.r]];
+    while (q.length) { var p = q.shift(), d0 = out[p[0] + "," + p[1]]; if (d0 >= sp) continue;
+      neighbors(p[0], p[1]).forEach(function (n) { var k = n[0] + "," + n[1]; if (k in out || blocked(B, n[0], n[1], s)) return; out[k] = d0 + 1; q.push(n); }); }
+    return out;
+  }
+  function heroOf(B, side) { return side === "b" ? B.bHero : B.rHero; }
+  function calcDamage(B, a, t, ranged) {
+    var ua = U[a.type], ut = U[t.type], ha = heroOf(B, a.side), ht = heroOf(B, t.side);
+    var base = 0, rolls = Math.min(a.n, 10); for (var i = 0; i < rolls; i++) base += ri(ua.dmg[0], ua.dmg[1]); base = base * a.n / rolls;
+    return Math.max(1, Math.round(base * dmgMult(B, a, t, ranged)));
+  }
+  function dmgMult(B, a, t, ranged) {
+    var ua = U[a.type], ut = U[t.type], ha = heroOf(B, a.side), ht = heroOf(B, t.side);
+    var A = ua.atk + eff(ha, "atk"), D = ut.def + eff(ht, "def"); if (t.defending) D = Math.round(D * 1.3);
+    var mult = A >= D ? Math.min(4, 1 + .05 * (A - D)) : Math.max(.3, 1 - .025 * (D - A));
+    if (ranged && hexDist([a.c, a.r], [t.c, t.r]) > 6) mult *= .5;
+    if (ua.antiFly && ut.fly) mult *= 1.5;
+    return mult * (1 + eff(ha, "dmgPct") / 100);
+  }
+  function preview(B, a, t, ranged) {
+    var ua = U[a.type], m = dmgMult(B, a, t, ranged), lo = Math.max(1, Math.round(a.n * ua.dmg[0] * m)), hi = Math.max(1, Math.round(a.n * ua.dmg[1] * m));
+    var hp = U[t.type].hp, tot = (t.n - 1) * hp + t.top;
+    function kills(d) { var left = tot - d; return left <= 0 ? t.n : t.n - Math.ceil(left / hp); }
+    return (ranged ? "Выстрел" : "Удар") + ": " + lo + "–" + hi + " урона, погибнет " + kills(lo) + "–" + kills(hi) + " из " + t.n + ".";
+  }
+  function applyDamage(t, d) { var hp = U[t.type].hp, total = (t.n - 1) * hp + t.top - d, before = t.n; if (total <= 0) { t.n = 0; t.top = 0; return before; } t.n = Math.ceil(total / hp); t.top = total - (t.n - 1) * hp; return before - t.n; }
+  function strike(B, a, t, ranged) {
+    var d = calcDamage(B, a, t, ranged), lucky = Math.random() < eff(heroOf(B, a.side), "luck") * .1; if (lucky) d *= 2;
+    var k = applyDamage(t, d);
+    if (ranged) B.ev.push({ kind: "arrow", from: a, to: t });
+    B.ev.push({ s: t, text: "−" + k, col: lucky ? "#ffd34a" : "#ff8a7a", hit: true }); if (lucky) B.ev.push({ s: a, text: "Удача!", col: "#ffd34a" });
+    var msg = (lucky ? "Удача! " : "") + U[a.type].name + (ranged ? " стреляют" : " атакуют") + ": " + U[t.type].name.toLowerCase() + " −" + k + ".";
+    if (U[a.type].splash) { var sp = 0; alive(B, t.side).forEach(function (o) { if (o !== t && hexDist([o.c, o.r], [t.c, t.r]) === 1) { var ks = applyDamage(o, Math.round(calcDamage(B, a, o, ranged) / 2)); sp += ks; B.ev.push({ s: o, text: "−" + ks, col: "#c08cf0", hit: true }); } }); if (sp) msg += " Облако смерти: −" + sp + " рядом."; }
+    if (!ranged && t.n > 0 && t.retal && !U[a.type].noRetal) { if (!U[t.type].unlimRetal) t.retal = false; var k2 = applyDamage(a, calcDamage(B, t, a, false)); B.ev.push({ s: a, text: "−" + k2, col: "#ff8a7a", hit: true }); msg += " Ответ: −" + k2 + "."; }
+    if (ranged) a.shots--;
+    B.log = msg; checkEnd(B);
+  }
+  function adjacentEnemy(B, s) { return alive(B, s.side === "b" ? "r" : "b").some(function (e) { return hexDist([s.c, s.r], [e.c, e.r]) === 1; }); }
+  function canShoot(B, s) { return U[s.type].shots && s.shots > 0 && !adjacentEnemy(B, s); }
+  function spellDamage(h) { return (15 + 15 * eff(h, "pow")) * (1 + eff(h, "boltX")); }
+  function castSpell(B, side, t) { var h = heroOf(B, side); var k = applyDamage(t, spellDamage(h)); B.ev.push({ kind: "bolt", s: t }); B.ev.push({ s: t, text: "−" + k, col: "#bfe6ff" }); B.spellUsed[side] = true; B.log = h.name + " бьёт молнией: " + U[t.type].name.toLowerCase() + " −" + k + "."; checkEnd(B); }
+  function castHeal(B, side, t) { var h = heroOf(B, side), hp = U[t.type].hp, tot = Math.min(t.startN * hp, (t.n - 1) * hp + t.top + 20 + 20 * eff(h, "pow")), before = t.n; t.n = Math.ceil(tot / hp); t.top = tot - (t.n - 1) * hp; B.ev.push({ s: t, text: "+" + (t.n - before), col: "#7ee06b", heal: true }); B.spellUsed[side] = true; B.log = h.name + " лечит: " + U[t.type].name.toLowerCase() + " +" + (t.n - before) + "."; }
+  function castHaste(B, side, t) { t.haste = true; B.ev.push({ s: t, text: "Ускорение", col: "#7fd1ff", heal: true }); B.spellUsed[side] = true; B.log = heroOf(B, side).name + " ускоряет: " + U[t.type].name.toLowerCase() + " +2 к скорости."; }
+  function afterAct(B, s) { if (B.over || s.n <= 0 || s.moraled) return; if (Math.random() < eff(heroOf(B, s.side), "morale") * .1) { s.moraled = true; B.queue.unshift(s); B.ev.push({ s: s, text: "Мораль!", col: "#f0d38a" }); B.log += " Мораль! " + U[s.type].name + " ходят ещё раз."; } }
+  function checkEnd(B) { if (!alive(B, "b").length || !alive(B, "r").length) B.over = true; }
+  function expected(B, a, t, ranged) { var ua = U[a.type]; var avg = (ua.dmg[0] + ua.dmg[1]) / 2 * a.n; var dmg = avg * dmgMult(B, a, t, ranged); var tot = (t.n - 1) * U[t.type].hp + t.top; return Math.min(dmg, tot) * (1 + U[t.type].atk / 10) + (dmg >= tot ? 40 : 0); }
+  function aiAct(B, s) {
+    var foes = alive(B, s.side === "b" ? "r" : "b"); if (!foes.length) return;
+    var h = heroOf(B, s.side);
+    if (h && !B.spellUsed[s.side] && eff(h, "pow")) { var tgt = foes.slice().sort(function (a, b) { return Math.min((b.n - 1) * U[b.type].hp + b.top, spellDamage(h)) * U[b.type].atk - Math.min((a.n - 1) * U[a.type].hp + a.top, spellDamage(h)) * U[a.type].atk; })[0]; castSpell(B, s.side, tgt); if (B.over) return; }
+    if (canShoot(B, s)) { var t = foes.slice().sort(function (a, b) { return expected(B, s, b, true) - expected(B, s, a, true); })[0]; strike(B, s, t, true); return; }
+    var rm = reach(B, s), bestA = null;
+    foes.forEach(function (e) { neighbors(e.c, e.r).forEach(function (n) { var k = n[0] + "," + n[1]; if (!(k in rm)) return; var sc = expected(B, s, e, false) - rm[k] * .5; if (!bestA || sc > bestA.sc) bestA = { e: e, n: n, sc: sc }; }); });
+    if (bestA) { s.c = bestA.n[0]; s.r = bestA.n[1]; strike(B, s, bestA.e, false); return; }
+    var near = foes.slice().sort(function (a, b) { return hexDist([s.c, s.r], [a.c, a.r]) - hexDist([s.c, s.r], [b.c, b.r]); })[0], bestM = null;
+    Object.keys(rm).forEach(function (k) { var p = k.split(",").map(Number), d = hexDist(p, [near.c, near.r]); if (!bestM || d < bestM.d) bestM = { p: p, d: d }; });
+    if (bestM) { s.c = bestM.p[0]; s.r = bestM.p[1]; } B.log = U[s.type].name + " идут вперёд.";
+  }
+  function survivors(B, side) { return mergeArmy(alive(B, side).map(function (s) { return { type: s.type, n: s.n }; })); }
+  function xpFrom(B, side) { var xp = 0; B.stacks.forEach(function (s) { if (s.side !== side) xp += (s.startN - s.n) * U[s.type].hp; }); return xp; }
+  function runHeadless(bArmy, rArmy, bHero, rHero) {
+    var B = makeBattle(bArmy, rArmy, bHero, rHero), guard = 0;
+    while (!B.over && guard++ < 600) { var s = nextStack(B); aiAct(B, s); afterAct(B, s); }
+    return { won: alive(B, "b").length > 0 && !alive(B, "r").length, b: survivors(B, "b"), r: survivors(B, "r"), xp: xpFrom(B, "b") };
+  }
+
+  // ================= interactive battle =================
+  var bc = $("battle"), bx = bc.getContext("2d"), BT = null;
+  function startBattle(hero, foe, cb) {
+    G.busy = true; closePanel();
+    BT = { B: makeBattle(hero.army, foe.army, hero, foe.hero), hero: hero, foe: foe, cb: cb, cur: null, auto: false, spellMode: false, sel: null };
+    $("map").hidden = true; bc.hidden = false; $("mapBar").hidden = true; $("battleBar").hidden = false; $("autoBtn").classList.remove("on");
+    hint("Бой: " + foe.name + ". "); BT.fx = [];
+    (function loop() { if (!BT) return; drawBattle(); requestAnimationFrame(loop); })();
+    advance();
+  }
+  function advance() {
+    var B = BT.B;
+    if (B.over) { finishBattle(); return; }
+    BT.cur = nextStack(B); BT.spellMode = false; BT.sel = null; $("spellBtn").classList.remove("on");
+    $("roundLbl").textContent = "Раунд " + B.round;
+    $("spellBtn").disabled = B.spellUsed.b; drawBattle();
+    if (BT.cur.side === "r" || BT.auto) { setTimeout(function () { if (!BT) return; aiAct(B, BT.cur); afterAct(B, BT.cur); drawBattle(); hint(B.log); setTimeout(advance, 260); }, 380); }
+    else hint((B.log ? B.log + " " : "") + "Ходят " + U[BT.cur.type].name.toLowerCase() + (canShoot(B, BT.cur) ? ". Нажмите на врага, чтобы выстрелить." : "."));
+  }
+  function finishBattle() {
+    var B = BT.B, won = alive(B, "b").length > 0, hero = BT.hero, cb = BT.cb;
+    hero.army = survivors(B, "b");
+    var surv = survivors(B, "r"), xp = xpFrom(B, "b");
+    BT = null;
+    setTimeout(function () {
+      bc.hidden = true; $("map").hidden = false; $("battleBar").hidden = true; $("mapBar").hidden = false;
+      if (won) { sfx("win"); gainExp(hero, xp); hint("Победа! Получено опыта: " + Math.round(xp) + "."); cb(true, surv); if (!G.over) { G.busy = false; drawMap(); updateUI(); save(); checkLevelUp(); } }
+      else { hero.alive = false; cb(false, surv); endGame(false, "Армия Эльмиры разбита."); }
+    }, 500);
+  }
+  var RM = matchMedia("(prefers-reduced-motion: reduce)");
+  function consumeEvents() {
+    var B = BT.B, now = performance.now();
+    B.ev.splice(0).forEach(function (e, i) {
+      var s = e.s || e.to, p = s ? [s.ax != null ? s.ax : hexCenter(s.c, s.r)[0], s.ay != null ? s.ay : hexCenter(s.c, s.r)[1]] : [300, 300];
+      if (e.kind === "arrow") { BT.fx.push({ kind: "arrow", x0: e.from.ax, y0: e.from.ay, x1: p[0], y1: p[1], t0: now }); sfx("shoot"); return; }
+      if (e.kind === "bolt") { BT.fx.push({ kind: "bolt", x: p[0], y: p[1], t0: now }); sfx("bolt"); return; }
+      if (e.hit) { s.flash = now + 120; sfx("hit"); } if (e.heal) sfx("heal");
+      BT.fx.push({ kind: "text", x: p[0], y: p[1] - 20, text: e.text, col: e.col, t0: now + i * 60 });
+    });
+  }
+  function drawBattle() {
+    if (!BT) return; var B = BT.B, cur = BT.cur, now = performance.now(); consumeEvents();
+    var g = bx.createLinearGradient(0, 0, 0, 600); g.addColorStop(0, "#556b3a"); g.addColorStop(1, "#6f8a45"); bx.fillStyle = g; bx.fillRect(0, 0, 600, 600);
+    var mine = cur && cur.side === "b" && !BT.auto, rm = mine ? reach(B, cur) : {};
+    for (var r = 0; r < HR; r++) for (var c = 0; c < HC; c++) {
+      var p = hexCenter(c, r); bx.beginPath(); for (var i = 0; i < 6; i++) { var a = Math.PI / 180 * (60 * i - 30); bx.lineTo(p[0] + (R - 1.5) * Math.cos(a), p[1] + (R - 1.5) * Math.sin(a)); } bx.closePath();
+      var on = (c + "," + r) in rm; bx.fillStyle = on ? "rgba(217,169,70,.28)" : "rgba(0,0,0,.07)"; bx.fill(); bx.strokeStyle = on ? "rgba(240,211,138,.7)" : "rgba(0,0,0,.22)"; bx.lineWidth = 1.3; bx.stroke();
+    }
+    B.obstacles.forEach(function (o) { var p = hexCenter(o[0], o[1]); bx.fillStyle = "#6e6a60"; bx.beginPath(); bx.ellipse(p[0], p[1] + 5, 22, 14, 0, 0, 7); bx.fill(); bx.fillStyle = "#8a867a"; bx.beginPath(); bx.ellipse(p[0] - 4, p[1], 14, 9, 0, 0, 7); bx.fill(); });
+    B.stacks.forEach(function (s) {
+      var tp = hexCenter(s.c, s.r);
+      if (s.ax == null || RM.matches) { s.ax = tp[0]; s.ay = tp[1]; } else { s.ax += (tp[0] - s.ax) * .22; s.ay += (tp[1] - s.ay) * .22; if (Math.abs(tp[0] - s.ax) < .5 && Math.abs(tp[1] - s.ay) < .5) { s.ax = tp[0]; s.ay = tp[1]; } }
+      if (s.n <= 0) { if (!s.deadT) { s.deadT = now; sfx("death"); } var al = 1 - (now - s.deadT) / 500; if (al > 0) { bx.globalAlpha = al; unitIcon(bx, s.ax, s.ay - 4 + (1 - al) * 10, 28, U[s.type].icon, s.side === "b" ? C.blue : C.red); bx.globalAlpha = 1; } return; }
+      var p = [s.ax, s.ay];
+      if (s === cur) { bx.beginPath(); for (var i = 0; i < 6; i++) { var a = Math.PI / 180 * (60 * i - 30); bx.lineTo(p[0] + (R - 3) * Math.cos(a), p[1] + (R - 3) * Math.sin(a)); } bx.closePath(); bx.strokeStyle = "#f0d38a"; bx.lineWidth = 4; bx.stroke(); }
+      unitIcon(bx, p[0], p[1] - 4, 28, U[s.type].icon, s.side === "b" ? C.blue : C.red);
+      if (s.flash && now < s.flash) { bx.fillStyle = "rgba(255,255,255,.55)"; bx.beginPath(); bx.arc(p[0], p[1] - 4, 24, 0, 7); bx.fill(); }
+      if (U[s.type].up) { bx.fillStyle = "#f0d38a"; bx.beginPath(); bx.moveTo(p[0] - 26, p[1] - 30); bx.lineTo(p[0] - 22, p[1] - 24); bx.lineTo(p[0] - 26, p[1] - 18); bx.lineTo(p[0] - 30, p[1] - 24); bx.fill(); }
+      bx.fillStyle = s.side === "b" ? "#1d3050" : "#4d1a15"; bx.fillRect(p[0] + 2, p[1] + 12, 32, 17); bx.strokeStyle = "#000"; bx.lineWidth = 1; bx.strokeRect(p[0] + 2, p[1] + 12, 32, 17);
+      bx.fillStyle = C.text; bx.font = "bold 14px sans-serif"; bx.textAlign = "center"; bx.fillText(s.n, p[0] + 18, p[1] + 25);
+      if (s.defending) { bx.fillStyle = "#d9a946"; bx.fillRect(p[0] - 30, p[1] + 14, 8, 10); }
+      if (s.haste) { bx.fillStyle = "#7fd1ff"; bx.beginPath(); bx.moveTo(p[0] - 30, p[1] - 22); bx.lineTo(p[0] - 22, p[1] - 22); bx.lineTo(p[0] - 26, p[1] - 14); bx.fill(); }
+      if (s === BT.sel) { bx.strokeStyle = "#ff8a7a"; bx.lineWidth = 3; bx.beginPath(); bx.arc(p[0], p[1], R - 6, 0, 7); bx.stroke(); }
+    });
+    BT.fx = BT.fx.filter(function (f) {
+      var t = (now - f.t0) / 1000; if (t < 0) return true;
+      if (f.kind === "text") { if (t > 1) return false; bx.globalAlpha = 1 - t; bx.font = "bold 22px sans-serif"; bx.textAlign = "center"; bx.lineWidth = 4; bx.strokeStyle = "#000"; bx.strokeText(f.text, f.x, f.y - t * 40); bx.fillStyle = f.col || "#fff"; bx.fillText(f.text, f.x, f.y - t * 40); bx.globalAlpha = 1; return true; }
+      if (f.kind === "arrow") { if (t > .25) return false; var k = t / .25, x = f.x0 + (f.x1 - f.x0) * k, y = f.y0 + (f.y1 - f.y0) * k - Math.sin(k * Math.PI) * 30; bx.strokeStyle = "#f3e7c8"; bx.lineWidth = 3; bx.beginPath(); bx.moveTo(x, y); bx.lineTo(x - (f.x1 - f.x0) * .05, y - (f.y1 - f.y0) * .05); bx.stroke(); return true; }
+      if (f.kind === "bolt") { if (t > .35) return false; bx.globalAlpha = 1 - t / .35; bx.strokeStyle = "#dff4ff"; bx.lineWidth = 4; bx.beginPath(); var yy = 0, xx = f.x; bx.moveTo(xx, 0); while (yy < f.y) { yy += 40; xx = f.x + (Math.random() - .5) * 40; bx.lineTo(yy >= f.y ? f.x : xx, Math.min(yy, f.y)); } bx.stroke(); bx.fillStyle = "rgba(220,240,255,.35)"; bx.fillRect(0, 0, 600, 600); bx.globalAlpha = 1; return true; }
+      return false;
+    });
+  }
+  bc.addEventListener("click", function (e) {
+    if (!BT || !BT.cur || BT.cur.side !== "b" || BT.auto) return;
+    var B = BT.B, s = BT.cur, rect = bc.getBoundingClientRect(), px = (e.clientX - rect.left) / rect.width * 600, py = (e.clientY - rect.top) / rect.height * 600;
+    var best = null, bd = 1e9; for (var r = 0; r < HR; r++) for (var c = 0; c < HC; c++) { var p = hexCenter(c, r), d = Math.hypot(p[0] - px, p[1] - py); if (d < bd) { bd = d; best = [c, r]; } }
+    if (!best || bd > R) return;
+    var enemy = alive(B, "r").filter(function (t) { return t.c === best[0] && t.r === best[1]; })[0];
+    if (BT.spellMode) {
+      var ally = alive(B, "b").filter(function (t) { return t.c === best[0] && t.r === best[1]; })[0];
+      if (BT.spellMode === "bolt") { if (!enemy) { hint("Выберите вражеский отряд для молнии."); return; } castSpell(B, "b", enemy); }
+      else { if (!ally) { hint("Выберите свой отряд."); return; } if (BT.spellMode === "heal") castHeal(B, "b", ally); else castHaste(B, "b", ally); }
+      BT.spellMode = false; $("spellBtn").classList.remove("on"); $("spellBtn").disabled = true; hint(B.log); drawBattle(); if (B.over) finishBattle(); return;
+    }
+    if (enemy) {
+      var shoot = canShoot(B, s), rm = reach(B, s), opts = shoot ? [] : neighbors(enemy.c, enemy.r).filter(function (n) { return (n[0] + "," + n[1]) in rm; });
+      if (!shoot && !opts.length) { hint("Не дотянуться. Подойдите ближе."); return; }
+      if (BT.sel !== enemy) { BT.sel = enemy; hint(preview(B, s, enemy, shoot) + " Нажмите ещё раз, чтобы атаковать."); drawBattle(); return; }
+      if (shoot) { strike(B, s, enemy, true); afterAct(B, s); hint(B.log); advance(); return; }
+      opts.sort(function (a, b) { var pa = hexCenter(a[0], a[1]), pb = hexCenter(b[0], b[1]); return Math.hypot(pa[0] - px, pa[1] - py) - Math.hypot(pb[0] - px, pb[1] - py); });
+      s.c = opts[0][0]; s.r = opts[0][1]; strike(B, s, enemy, false); afterAct(B, s); advance(); return;
+    }
+    var rm2 = reach(B, s);
+    if ((best[0] + "," + best[1]) in rm2 && !(best[0] === s.c && best[1] === s.r)) { s.c = best[0]; s.r = best[1]; B.log = U[s.type].name + " перемещаются."; afterAct(B, s); advance(); }
+    else hint("Сюда не дойти за этот ход.");
+  });
+  $("defBtn").addEventListener("click", function () { if (!BT || !BT.cur || BT.cur.side !== "b" || BT.auto) return; BT.cur.defending = true; BT.B.log = U[BT.cur.type].name + " в обороне."; var c = BT.cur; advance(); c.defending = true; drawBattle(); });
+  $("spellBtn").addEventListener("click", function () {
+    if (!BT || BT.B.spellUsed.b || !BT.cur || BT.cur.side !== "b" || BT.auto) return;
+    if (BT.spellMode) { BT.spellMode = false; $("spellBtn").classList.remove("on"); hint("Заклинание отменено."); return; }
+    var h = BT.hero, p = eff(h, "pow");
+    openPanel('<h2>Книга заклинаний</h2><div class="choice"><button class="btn ghost" data-sp="bolt">Молния: ' + spellDamage(h) + ' урона врагу</button><button class="btn ghost" data-sp="heal"' + (G.built.guild ? "" : " disabled") + '>Лечение: +' + (20 + 20 * p) + ' здоровья, поднимает павших' + (G.built.guild ? "" : " (нужна Гильдия магов)") + '</button><button class="btn ghost" data-sp="haste"' + (G.built.guild ? "" : " disabled") + '>Ускорение: +2 к скорости своему отряду' + (G.built.guild ? "" : " (нужна Гильдия магов)") + '</button></div><button class="btn ghost" id="spClose">Отмена</button>');
+    $("panel").querySelectorAll("[data-sp]").forEach(function (b) { b.addEventListener("click", function () { BT.spellMode = b.getAttribute("data-sp"); closePanel(); $("spellBtn").classList.add("on"); hint(BT.spellMode === "bolt" ? "Выберите вражеский отряд." : "Выберите свой отряд."); }); });
+    $("spClose").addEventListener("click", closePanel);
+  });
+  $("autoBtn").addEventListener("click", function () { if (!BT) return; BT.auto = !BT.auto; $("autoBtn").classList.toggle("on", BT.auto); if (BT.auto && BT.cur && BT.cur.side === "b") { var B = BT.B; closePanel(); aiAct(B, BT.cur); afterAct(B, BT.cur); drawBattle(); hint(B.log); setTimeout(advance, 260); } });
+
+  if (!load()) newGame();
+})();
+</script>
