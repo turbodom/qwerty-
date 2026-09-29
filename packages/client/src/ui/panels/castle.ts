@@ -1,5 +1,6 @@
 import { BUILDINGS, FACTION_UNITS, UNITS, heroCastle } from "@korony/shared";
 import type { UnitId } from "@korony/shared";
+import { buildingIconUrl } from "../../gfx/artUrls";
 import { unitIconUrl } from "../../gfx/bake";
 import {
   buildReason, factionBuildings, hireInfo, mePlayer, myHero, ownerColor, upgradeInfo,
@@ -97,6 +98,7 @@ export function castlePanel(app: AppApi): PanelSpec {
       h(
         "div",
         { class: "item-row", testid: `build-${id}` },
+        h("img", { src: buildingIconUrl(id), alt: "" }),
         h(
           "div",
           { class: "grow" },

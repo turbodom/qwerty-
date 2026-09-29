@@ -10,6 +10,7 @@ import {
 } from "./draw";
 import type { TerrainChar } from "./draw";
 import type { ColorKey } from "./keys";
+import { artifactIconUrl, unitPicUrl } from "./artUrls";
 
 export interface Box {
   x0: number;
@@ -199,25 +200,12 @@ export function bakeTileMark(size: number): Baked {
 
 // ================= DOM icons =================
 
-const urlCache = new Map<string, string>();
-
-function toUrl(key: string, make: () => Baked): string {
-  const hit = urlCache.get(key);
-  if (hit) return hit;
-  let url = "";
-  try {
-    url = make().canvas.toDataURL("image/png");
-  } catch {
-    url = "";
-  }
-  urlCache.set(key, url);
-  return url;
-}
-
+/** Painted artifact icon (public/art). */
 export function artIconUrl(id: ArtifactId): string {
-  return toUrl(`art-${id}`, () => bakeArt(id, 2));
+  return artifactIconUrl(id);
 }
 
-export function unitIconUrl(unit: UnitId, color: ColorKey): string {
-  return toUrl(`unit-${unit}-${color}`, () => bakeUnit(unit, color, 1.2));
+/** Painted unit picture (public/art); the side colour is shown by the surrounding panel. */
+export function unitIconUrl(unit: UnitId, _color: ColorKey): string {
+  return unitPicUrl(unit);
 }
