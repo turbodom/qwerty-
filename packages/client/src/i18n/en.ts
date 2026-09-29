@@ -179,6 +179,11 @@ export const en: Record<I18nKey, string> = {
 
   "castle.title": "Castle: {faction}",
   "castle.goldRow": "Gold",
+  "city.stage.0": "Shelter",
+  "city.stage.1": "Camp",
+  "city.stage.2": "Outpost",
+  "city.stage.3": "Fortress",
+  "city.progress": "Built {n} of {total}: every building expands the settlement",
   "castle.notHere": "The hero must stand in your castle to hire, build and upgrade.",
   "castle.goHome": "Go to the castle",
   "castle.hire": "Hire",

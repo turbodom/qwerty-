@@ -33,12 +33,15 @@ export const TEX = {
   hexActive: "hex-active",
   hexSelect: "hex-select",
   rock: "rock",
+  rock2: "rock2",
+  smoke: "fx-smoke",
+  muzzle: "fx-muzzle",
+  spark: "fx-spark",
   battleBg: "battle-bg",
   dotGreen: "dot-green",
   dotRed: "dot-red",
   crossGreen: "cross-green",
   crossRed: "cross-red",
-  arrow: "arrow",
   tileMark: "tile-mark",
 } as const;
 

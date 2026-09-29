@@ -127,6 +127,44 @@ export function bakeHex(kind: "base" | "reach" | "attack" | "active" | "select",
   });
 }
 
+/** Soft round puff (tinted per use: smoke, dust, psionic glow). */
+export function bakeSmoke(r: number): Baked {
+  return bake({ x0: -r, y0: -r, x1: r, y1: r }, 1, (ctx) => {
+    const g = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
+    g.addColorStop(0, "rgba(255,255,255,.9)");
+    g.addColorStop(0.45, "rgba(255,255,255,.45)");
+    g.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
+/** Four-pointed muzzle flash star with a hot core. */
+export function bakeMuzzle(r: number): Baked {
+  return bake({ x0: -r, y0: -r, x1: r, y1: r }, 1, (ctx) => {
+    const g = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 0.55);
+    g.addColorStop(0, "rgba(255,255,235,1)");
+    g.addColorStop(0.4, "rgba(255,210,110,.9)");
+    g.addColorStop(1, "rgba(255,140,40,0)");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.55, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "rgba(255,225,150,.85)";
+    for (let i = 0; i < 4; i++) {
+      const a = (Math.PI / 2) * i;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+      ctx.lineTo(Math.cos(a + 0.35) * r * 0.2, Math.sin(a + 0.35) * r * 0.2);
+      ctx.lineTo(Math.cos(a - 0.35) * r * 0.2, Math.sin(a - 0.35) * r * 0.2);
+      ctx.closePath();
+      ctx.fill();
+    }
+  });
+}
+
 export function bakeRock(scale: number): Baked {
   return bake({ x0: -23, y0: -10, x1: 23, y1: 20 }, scale, (ctx) => drawRock(ctx, 0, 0));
 }
@@ -169,23 +207,6 @@ export function bakeDot(color: string, cross: boolean, scale: number): Baked {
       ctx.lineWidth = 1;
       ctx.stroke();
     }
-  });
-}
-
-export function bakeArrow(scale: number): Baked {
-  return bake({ x0: -14, y0: -3, x1: 14, y1: 3 }, scale, (ctx) => {
-    ctx.strokeStyle = "#f3e7c8";
-    ctx.lineWidth = 2.5;
-    ctx.beginPath();
-    ctx.moveTo(-13, 0);
-    ctx.lineTo(10, 0);
-    ctx.stroke();
-    ctx.fillStyle = "#f3e7c8";
-    ctx.beginPath();
-    ctx.moveTo(14, 0);
-    ctx.lineTo(8, -3);
-    ctx.lineTo(8, 3);
-    ctx.fill();
   });
 }
 

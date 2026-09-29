@@ -103,6 +103,8 @@ export class BattleScene extends Phaser.Scene {
   private acting: number | null = null;
   private winnerSide: Seat | null = null;
   private speed = 1;
+  /** Stack hit by the last melee attack or shot: it is the one that retaliates. */
+  private lastTarget: number | null = null;
 
   constructor() {
     super("BattleScene");
@@ -140,9 +142,11 @@ export class BattleScene extends Phaser.Scene {
     }
     for (const o of this.model.obstacles) {
       const [x, y] = this.hexCenter(o[0], o[1]);
-      const org = originOf(TEX.rock);
-      this.add.image(x, y, TEX.rock).setOrigin(org.x, org.y).setDepth(5 + this.displayRow(o[1]));
+      const key = (o[0] + o[1]) % 2 ? TEX.rock2 : TEX.rock;
+      const org = originOf(key);
+      this.add.image(x, y, key).setOrigin(org.x, org.y).setDepth(5 + this.displayRow(o[1]));
     }
+    this.ambientSmoke();
     this.activeMark = this.add.image(0, 0, TEX.hexActive).setDepth(3).setVisible(false);
     this.selMark = this.add.image(0, 0, TEX.hexSelect).setDepth(4).setVisible(false);
     for (const s of this.model.stacks) if (s.count > 0) this.stacks.set(s.id, this.makeStack(s));
@@ -341,6 +345,18 @@ export class BattleScene extends Phaser.Scene {
     const defend = this.add.rectangle(-26 * K, 19 * K, 8 * K, 10 * K, 0xd9a946).setVisible(s.defending);
     const haste = this.add.triangle(-26 * K, -18 * K, 0, 0, 8 * K, 0, 4 * K, 8 * K, 0x7fd1ff).setVisible(s.haste);
     container.add([icon, flash, badge, count, defend, haste]);
+    // idle breathing so the field never looks frozen
+    if (!reducedMotion()) {
+      this.tweens.add({
+        targets: icon,
+        y: icon.y - 2.5 * K,
+        duration: 900 + Math.random() * 500,
+        delay: Math.random() * 600,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.easeInOut",
+      });
+    }
     return { container, icon, flash, count, defend, haste };
   }
 
@@ -606,16 +622,179 @@ export class BattleScene extends Phaser.Scene {
     this.tweens.add({ targets: v.flash, alpha: 0, duration: 180, onComplete: () => v.flash.setVisible(false) });
   }
 
-  private async arrow(fromId: number | null, toId: number): Promise<void> {
-    const a = fromId === null ? undefined : getStack(this.model, fromId);
-    const b = getStack(this.model, toId);
-    if (!a || !b) return;
-    const [x0, y0] = this.hexCenter(a.c, a.r);
-    const [x1, y1] = this.hexCenter(b.c, b.r);
-    const img = this.add.image(x0, y0 - 10 * K, TEX.arrow).setDepth(700);
-    img.setRotation(Math.atan2(y1 - y0, x1 - x0));
-    await this.tweenTo(img, { x: x1, y: y1 - 10 * K }, 240 * this.speed);
-    img.destroy();
+  // ----- battle effects: facing, stepping out of cover, muzzle flash, tracer, impact, smoke -----
+
+  private stackPos(stackId: number | null): [number, number] | null {
+    if (stackId === null) return null;
+    const v = this.stacks.get(stackId);
+    if (v) return [v.container.x, v.container.y];
+    const st = getStack(this.model, stackId);
+    return st ? this.hexCenter(st.c, st.r) : null;
+  }
+
+  /** Turns a stack's sprite toward world x `tx` (pictures face right, red ones are baked mirrored). */
+  private face(stackId: number | null, tx: number): void {
+    if (stackId === null) return;
+    const v = this.stacks.get(stackId);
+    const st = getStack(this.model, stackId);
+    if (!v || !st || Math.abs(tx - v.container.x) < 1) return;
+    const bakedRight = this.colorFor(st.side) !== "red";
+    v.icon.setFlipX(bakedRight !== tx > v.container.x);
+  }
+
+  /** A few soft puffs that grow and fade: smoke, dust or psionic glow depending on `tint`. */
+  private puff(x: number, y: number, tint: number, count: number, spread: number, life: number): void {
+    if (reducedMotion()) return;
+    for (let i = 0; i < count; i++) {
+      const img = this.add
+        .image(x + (Math.random() - 0.5) * spread, y + (Math.random() - 0.5) * spread * 0.6, TEX.smoke)
+        .setTint(tint)
+        .setAlpha(0.55)
+        .setScale(0.35 + Math.random() * 0.3)
+        .setDepth(760);
+      this.tweens.add({
+        targets: img,
+        y: img.y - (10 + Math.random() * 18) * K,
+        x: img.x + (Math.random() - 0.5) * 16 * K,
+        scale: img.scale * (2 + Math.random()),
+        alpha: 0,
+        duration: life * (0.7 + Math.random() * 0.6),
+        ease: "Sine.easeOut",
+        onComplete: () => img.destroy(),
+      });
+    }
+  }
+
+  private sparks(x: number, y: number, tint: number): void {
+    if (reducedMotion()) return;
+    for (let i = 0; i < 7; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const img = this.add.image(x, y, TEX.spark).setTint(tint).setDepth(770).setScale(0.8 + Math.random() * 0.6);
+      this.tweens.add({
+        targets: img,
+        x: x + Math.cos(a) * (14 + Math.random() * 22) * K,
+        y: y + Math.sin(a) * (10 + Math.random() * 16) * K,
+        alpha: 0,
+        scale: 0.2,
+        duration: 260 + Math.random() * 160,
+        ease: "Quad.easeOut",
+        onComplete: () => img.destroy(),
+      });
+    }
+  }
+
+  private shake(intensity: number): void {
+    if (!reducedMotion()) this.cameras.main.shake(140, intensity);
+  }
+
+  /** The hit stack flinches away from (fx, fy), with sparks and a dust puff. */
+  private impact(toId: number, fx: number, fy: number, tint = 0xffc070): void {
+    const v = this.stacks.get(toId);
+    const p = this.stackPos(toId);
+    if (!p) return;
+    const [x, y] = p;
+    this.sparks(x, y - 12 * K, tint);
+    this.puff(x, y + 6 * K, 0x8a8070, 3, 18 * K, 700);
+    this.flash(toId);
+    this.shake(0.004);
+    if (v && !reducedMotion()) {
+      const d = Math.hypot(x - fx, y - fy) || 1;
+      this.tweens.add({
+        targets: v.container,
+        x: x + ((x - fx) / d) * 7 * K,
+        y: y + ((y - fy) / d) * 7 * K,
+        duration: 70,
+        yoyo: true,
+        ease: "Quad.easeOut",
+        onComplete: () => v.container.setPosition(x, y),
+      });
+    }
+  }
+
+  /** Ranged attack: the shooter steps out of cover, fires (muzzle flash + tracer), the target is hit, the shooter steps back. */
+  private async shot(fromId: number | null, toId: number): Promise<void> {
+    const to = this.stackPos(toId);
+    const from = this.stackPos(fromId);
+    if (!to) return;
+    if (!from || fromId === null) {
+      this.impact(toId, to[0], to[1] - 50 * K);
+      return;
+    }
+    const [ax, ay] = from;
+    const [bx, by] = to;
+    this.face(fromId, bx);
+    this.face(toId, ax);
+    const d = Math.hypot(bx - ax, by - ay) || 1;
+    const ux = (bx - ax) / d;
+    const uy = (by - ay) / d;
+    const v = this.stacks.get(fromId);
+    const psionic = getStack(this.model, fromId)?.unit === "lich";
+    const color = psionic ? 0x9dff6a : 0xffe2a0;
+    if (v) await this.tweenTo(v.container, { x: ax + ux * 10 * K, y: ay + uy * 10 * K }, 110 * this.speed);
+    const mx = ax + ux * 30 * K;
+    const my = ay - 10 * K + uy * 30 * K;
+    sfx("shoot");
+    const muzzle = this.add.image(mx, my, TEX.muzzle).setDepth(780).setTint(psionic ? 0xb8ff90 : 0xffffff);
+    muzzle.setRotation(Math.atan2(uy, ux)).setScale(1.3);
+    this.tweens.add({ targets: muzzle, alpha: 0, scale: 0.6, duration: 110, onComplete: () => muzzle.destroy() });
+    const g = this.add.graphics().setDepth(775);
+    g.lineStyle(psionic ? 5 : 3, color, 0.95);
+    g.beginPath();
+    g.moveTo(mx, my);
+    g.lineTo(bx, by - 12 * K);
+    g.strokePath();
+    this.tweens.add({ targets: g, alpha: 0, duration: 160, onComplete: () => g.destroy() });
+    this.puff(mx, my, 0xb0a898, 2, 8 * K, 600);
+    await this.wait(90 * this.speed);
+    this.impact(toId, ax, ay, psionic ? 0x9dff6a : 0xffc070);
+    if (psionic) this.puff(bx, by - 8 * K, 0x7dff5a, 4, 26 * K, 700);
+    if (v) void this.tweenTo(v.container, { x: ax, y: ay }, 160 * this.speed);
+  }
+
+  /** Melee: the attacker charges part of the way, strikes, and returns. */
+  private async lunge(fromId: number | null, toId: number): Promise<void> {
+    const to = this.stackPos(toId);
+    const from = this.stackPos(fromId);
+    const v = fromId === null ? undefined : this.stacks.get(fromId);
+    if (!to) return;
+    if (!from || !v) {
+      this.impact(toId, to[0], to[1] - 40 * K);
+      return;
+    }
+    const [ax, ay] = from;
+    const [bx, by] = to;
+    this.face(fromId, bx);
+    this.face(toId, ax);
+    await this.tweenTo(v.container, { x: ax + (bx - ax) * 0.45, y: ay + (by - ay) * 0.45 }, 130 * this.speed);
+    this.impact(toId, ax, ay);
+    await this.tweenTo(v.container, { x: ax, y: ay }, 150 * this.speed);
+  }
+
+  /** Slow haze drifting across the field. */
+  private ambientSmoke(): void {
+    if (reducedMotion()) return;
+    const x0 = -120 * K;
+    const x1 = BATTLE_W + 120 * K;
+    const drift = (img: Img, speed: number): void => {
+      this.tweens.add({
+        targets: img,
+        x: x1,
+        duration: ((x1 - img.x) / (x1 - x0)) * speed,
+        onComplete: () => {
+          img.x = x0;
+          drift(img, speed);
+        },
+      });
+    };
+    for (let i = 0; i < 4; i++) {
+      const img = this.add
+        .image(x0 + Math.random() * (x1 - x0), BATTLE_H * (0.15 + i * 0.22), TEX.smoke)
+        .setTint(0x9a9080)
+        .setAlpha(0.1)
+        .setScale(5 + Math.random() * 3, 2.5 + Math.random())
+        .setDepth(600);
+      drift(img, 22000 + Math.random() * 14000);
+    }
   }
 
   private bolt(toId: number): void {
@@ -682,15 +861,24 @@ export class BattleScene extends Phaser.Scene {
         const st = getStack(this.model, ev.stack);
         if (!st) break;
         if (ev.source === "shot") {
-          sfx("shoot");
-          await this.arrow(this.acting, ev.stack);
-        } else if (ev.source === "spell") {
+          await this.shot(this.acting, ev.stack);
+          this.lastTarget = ev.stack;
+        } else if (ev.source === "melee") {
+          await this.lunge(this.acting, ev.stack);
+          this.lastTarget = ev.stack;
+        } else if (ev.source === "retaliation") {
+          await this.lunge(this.lastTarget, ev.stack);
+        } else if (ev.source === "splash") {
+          const p = this.stackPos(ev.stack);
+          if (p) this.impact(ev.stack, p[0], p[1] - 30 * K, 0x9dff6a);
+        } else {
           sfx("bolt");
           this.bolt(ev.stack);
+          this.flash(ev.stack);
+          this.shake(0.008);
           await this.wait(200 * sp);
         }
         if (ev.source !== "spell") sfx("hit");
-        this.flash(ev.stack);
         st.count = Math.max(0, st.count - ev.killed);
         this.stacks.get(ev.stack)?.count.setText(String(st.count));
         const color = ev.lucky ? "#ffd34a" : ev.source === "splash" ? "#c08cf0" : ev.source === "spell" ? "#bfe6ff" : "#ff8a7a";
@@ -730,7 +918,16 @@ export class BattleScene extends Phaser.Scene {
         if (v) {
           this.stacks.delete(ev.stack);
           const c = v.container;
-          this.tweens.add({ targets: c, alpha: 0, y: c.y + 10 * K, duration: 480, onComplete: () => c.destroy() });
+          this.puff(c.x, c.y, 0x6f6a62, 5, 30 * K, 1100);
+          this.tweens.add({
+            targets: c,
+            alpha: 0,
+            y: c.y + 10 * K,
+            angle: v.icon.flipX ? -70 : 70,
+            duration: 560,
+            ease: "Quad.easeIn",
+            onComplete: () => c.destroy(),
+          });
         }
         if (this.acting === ev.stack) this.activeMark.setVisible(false);
         await this.wait(200 * sp);
