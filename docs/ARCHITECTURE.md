@@ -223,7 +223,10 @@ export interface AuthResponse { token: string; user: { uid: string; username: st
 
 - `POST /api/auth/pi` `{ accessToken }` проверяет токен запросом `GET {PI_API_BASE}/v2/me` с заголовком
   `Authorization: Bearer <accessToken>`, заводит или находит пользователя по `uid`, выдаёт свой токен сессии (JWT HS256, `jose`, 7 дней).
-- `POST /api/auth/dev` `{ username }` только при `ALLOW_DEV_LOGIN=true` (для разработки вне Pi Browser).
+- `POST /api/auth/guest` `{ username }`: гостевой вход для обычного браузера. Включён по умолчанию (`ALLOW_GUEST_LOGIN`),
+  перед подачей в Pi Mainnet выключается (`ALLOW_GUEST_LOGIN=false`, тогда 404 `guest_login_disabled`). Каждый вход создаёт
+  новый аккаунт `guest:<случайный id>`, имя только отображается, поэтому чужого гостя по имени не занять. Гостям платежи
+  закрыты (403 `pi_login_required`).
 - `GET /api/me` данные пользователя и покупки. `GET /api/shop` каталог `SHOP_ITEMS`.
 - Платежи (U2A), всё с `Authorization: Bearer <сессия>`:
   - `POST /api/payments/approve` `{ paymentId }`: `GET /v2/payments/{id}` с `Authorization: Key <PI_API_KEY>`, проверить,
@@ -237,13 +240,19 @@ export interface AuthResponse { token: string; user: { uid: string; username: st
   `createGame` с покупками (`loadout`), `onMessage("action")` проверяет сообщение `isClientMessage`, вызывает `applyAction`
   и шлёт каждому игроку `{ t: "view", view: playerView(state, p), events: eventsForPlayer(state, p, result.events) }`.
   По таймеру дня сервер вызывает `forceEndDay` за тех, кто не закончил.
-  Переподключение 60 секунд, таймер дня 90 секунд. Комнаты с кодом для игры с другом через `filterBy(["code"])`.
+  Переподключение 60 секунд, таймер дня 90 секунд. Игроки встречаются только с тем же кодом друга и картой
+  (`filterBy(["code", "mapId"])`, пустой код значит быструю игру). Игроки в комнате `p0` и `p1` по местам.
+  Уход с согласием (`leave(true)`, кнопка «Сдаться») засчитывается как поражение; обрыв связи ждёт переподключения,
+  а после него тоже поражение. Остановка сервера никому не засчитывается.
+  WebSocket через `@colyseus/ws-transport` на том же HTTP-сервере, что и REST; собранный клиент отдаётся тем же процессом.
 
 ## Клиент
 
 - `index.html` подключает `https://sdk.minepi.com/pi-sdk.js`. `src/pi.ts` оборачивает `window.Pi`: `init({ version: "2.0", sandbox })`,
   `authenticate(["username","payments"], onIncompletePaymentFound)`, покупки через `createPayment` и серверные эндпоинты.
-  Вне Pi Browser, если сервер разрешает, работает вход разработчика.
+  Pi Browser узнаётся по `PiBrowser/<версия>` в user agent (или песочница Developer Portal в рамке при `VITE_PI_SANDBOX=true`).
+  Только там SDK инициализируется и показывается вход через Pi. В обычном браузере сразу показывается вход гостем по имени
+  (имя запоминается) и игра против ИИ без входа.
 - `GameConnection`: `LocalGame` (против ИИ, движок в браузере, сохранение в `localStorage`) и `OnlineGame` (Colyseus).
   Оба отдают `PlayerView` и события, экраны не знают, откуда пришло состояние.
 - Phaser-сцены: `MapScene` (тайлы, объекты, герои, туман, путь по двойному нажатию), `BattleScene` (гексы, анимации, всплывающий урон).
