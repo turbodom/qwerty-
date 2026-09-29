@@ -1,10 +1,10 @@
 /**
  * Typed wrapper over the Pi SDK (`window.Pi`, loaded by index.html from sdk.minepi.com).
- * Pi login and payments are used only inside Pi Browser (or the Developer Portal sandbox). In a normal browser
- * the SDK is never initialised, `isPiBrowser()` is false and the login screen offers the guest login instead.
+ * Pi login and payments are used only with VITE_PI_LOGIN=true and inside Pi Browser (or the Developer Portal
+ * sandbox). Otherwise the SDK is never initialised, `isPiBrowser()` is false and the login screen offers the guest login instead.
  */
 import { api, getToken } from "./api";
-import { PI_SANDBOX } from "./config";
+import { PI_LOGIN, PI_SANDBOX } from "./config";
 
 export interface PiUser {
   uid: string;
@@ -110,7 +110,7 @@ export function inPiEnvironment(userAgent?: string, framed?: boolean): boolean {
  */
 export function initPi(): Promise<boolean> {
   initPromise ??= (async () => {
-    if (!inPiEnvironment()) return false;
+    if (!PI_LOGIN || !inPiEnvironment()) return false;
     const pi = await waitForSdk(SDK_WAIT_MS);
     if (!pi) return false;
     try {

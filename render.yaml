@@ -1,0 +1,27 @@
+# Render Blueprint: one web service serves the built client, the API and the Colyseus websocket.
+# Deploy: https://render.com/deploy?repo=https://github.com/turbodom/qwerty-
+services:
+  - type: web
+    name: korony-pustoshi
+    runtime: node
+    plan: free
+    # NODE_ENV=production would make npm skip the dev dependencies the client build needs.
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start --workspace @korony/server
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: SESSION_SECRET
+        generateValue: true
+      # Guest login stays on until Pi authentication is switched on (then set false and VITE_PI_LOGIN=true).
+      - key: ALLOW_GUEST_LOGIN
+        value: "true"
+      - key: VITE_PI_LOGIN
+        value: "false"
+      # Render terminates TLS in one proxy hop in front of the service.
+      - key: TRUST_PROXY
+        value: "1"
