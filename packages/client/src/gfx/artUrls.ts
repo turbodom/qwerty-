@@ -28,3 +28,14 @@ export function gearTier(worn: number): 0 | 1 | 2 {
 export function heroBodyUrl(side: "player" | "enemy", tier: 0 | 1 | 2): string {
   return artUrl(`hero-body-${side}-${tier}`);
 }
+
+/** Settlement look from the number of buildings put up: 0 shelter, 1 camp, 2 outpost, 3 fortress. */
+export function cityStage(built: number, total: number): 0 | 1 | 2 | 3 {
+  if (total <= 0 || built <= 0) return 0;
+  if (built >= total) return 3;
+  return Math.max(1, Math.min(2, Math.round((built / total) * 3))) as 1 | 2;
+}
+
+export function cityUrl(side: "player" | "enemy", stage: 0 | 1 | 2 | 3): string {
+  return artUrl(`city-${side}-${stage}`);
+}

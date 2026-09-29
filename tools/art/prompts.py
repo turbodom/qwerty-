@@ -9,6 +9,10 @@ a("menu-bg-tall", "Tall portrait composition: a lone survivor in tactical gear w
 a("logo", "Emblem: a heavy golden crown made of welded scrap metal and gears, above a battered dark steel shield with rivets and scratches, two crossed rifles behind the shield.")
 a("app-icon", "App icon: a golden scrap-metal crown on a battered dark steel shield, dark stormy post-apocalyptic sky with warm glow, square composition.", "bg")
 a("panel-tex", "Seamless texture of dark worn gunmetal steel plate with subtle scratches, rust spots and rivets, flat even lighting, fills the whole frame, no objects.", "bg")
+# settlement stages for the castle panel: stage 0 here, stages 1-3 by chained edit.py runs with prompts/city-<side>-<n>.txt
+def city(n, p): I.append({"name": n, "prompt": p, "kind": "bg", "ar": "16:9", "model": M2})
+city("city-player-0", "Isometric aerial view of a tiny survivor shelter in a post-apocalyptic wasteland: a single rusty shipping container and a tarp tent behind a low wall of sandbags, a campfire, a water barrel, a small plain white flag on a pole, surrounded by empty dusty ground, ruined city skyline far away at sunset. Wide cinematic strategy game city view, no text, no people close up.")
+city("city-enemy-0", "Isometric aerial view of a tiny raider camp in a post-apocalyptic wasteland: a rusted bus turned into a shack, a fence of scrap metal spikes, burning barrels, a red rag flag on a pole, surrounded by empty dusty ground, toxic haze, ruined city skyline far away at sunset. Wide cinematic strategy game city view, no text, no people close up.")
 # map objects
 a("base-player", "A fortified survivor base: compound walled with concrete blocks, sandbags and scrap metal sheets, a tall wooden watchtower, container buildings with blue tarps, a small greenhouse, a radio mast, a flag pole with a plain white flag, warm lights.")
 a("base-enemy", "A menacing raider mutant fortress: jagged walls of rusted scrap metal and spikes, a dark tower with red warning lights, burning barrels, toxic green smoke, skulls on poles.")
@@ -65,7 +69,8 @@ json.dump(I, open("prompts.json", "w"), ensure_ascii=False, indent=1)
 
 # processing specs for proc.cjs: sprite/icon = cut out the magenta background, bg = resize, tex = resize + make seamless.
 # map-valley comes from edit.py (layout.png + prompts/map.txt), hero-body-*-1/2 from edit.py on hero-body-*-0.
-names = [p["name"] for p in I if not p["name"].startswith("hero-body-")] + ["map-valley"]
+names = [p["name"] for p in I if not p["name"].startswith(("hero-body-", "city-"))] + ["map-valley"]
+names += [f"city-{side}-{n}" for side in ("player", "enemy") for n in range(4)]
 names += [f"hero-body-{side}-{tier}" for side in ("player", "enemy") for tier in range(3)]
 S = []
 for n in names:
@@ -76,6 +81,7 @@ for n in names:
     elif n == "map-valley": s = {"kind": "bg", "w": 896, "h": 1024, "q": 0.86}
     elif n == "battle-bg": s = {"kind": "bg", "w": 800, "h": 920}
     elif n.startswith("hero-body-"): s = {"kind": "bg", "w": 540, "h": 720}
+    elif n.startswith("city-"): s = {"kind": "bg", "w": 960, "h": 540, "q": 0.8}
     elif n.startswith("portrait-"): s = {"kind": "bg", "w": 256, "h": 256}
     elif n == "logo": s = {"kind": "sprite", "size": 640}
     elif n.startswith("rock"): s = {"kind": "sprite", "size": 192}

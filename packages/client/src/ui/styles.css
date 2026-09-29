@@ -279,6 +279,23 @@ input.field:focus { outline: 2px solid var(--gold); outline-offset: 0; }
 .panel-head h2 { font-family: var(--display); font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; color: var(--gold-2); text-shadow: 0 1px 0 #000; margin: 0; font-size: 21px; flex: 1; min-width: 0; line-height: 1.1; }
 .panel-body { padding: 12px 14px 16px; overflow-y: auto; display: grid; gap: 10px; -webkit-overflow-scrolling: touch; }
 .section-title { font-family: var(--display); text-transform: uppercase; letter-spacing: 0.06em; color: var(--gold-2); font-size: 15px; margin: 4px 0 0; }
+/* castle: the settlement picture with its stage */
+.city-view { position: relative; border-radius: 8px; overflow: hidden; border: 1px solid #4a4c52; aspect-ratio: 16 / 9; background: #0d0e10; }
+.city-view img { width: 100%; height: 100%; object-fit: cover; display: block; animation: city-in 0.6s ease-out; }
+.city-caption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 18px 10px 7px;
+  display: grid;
+  gap: 1px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.85));
+}
+.city-caption b { font-family: var(--display); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--gold-2); font-size: 18px; }
+.city-caption span { font-size: 12px; color: #d6ccb4; }
+@keyframes city-in { from { opacity: 0.4; transform: scale(1.04); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .city-view img { animation: none; } }
 /* hero paperdoll: slots left and right of the full-body figure */
 .paperdoll { display: grid; grid-template-columns: 64px 1fr 64px; gap: 6px; align-items: stretch; }
 .pd-col { display: grid; gap: 6px; align-content: start; }

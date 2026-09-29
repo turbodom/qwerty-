@@ -177,6 +177,11 @@ export const ru = {
 
   "castle.title": "Замок: {faction}",
   "castle.goldRow": "Золото",
+  "city.stage.0": "Убежище",
+  "city.stage.1": "Лагерь",
+  "city.stage.2": "Форпост",
+  "city.stage.3": "Крепость",
+  "city.progress": "Построено {n} из {total}: каждая постройка расширяет поселение",
   "castle.notHere": "Герой должен стоять в своём замке, чтобы нанимать, строить и улучшать.",
   "castle.goHome": "Идти в замок",
   "castle.hire": "Найм",

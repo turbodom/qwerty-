@@ -1,6 +1,6 @@
 import { BUILDINGS, FACTION_UNITS, UNITS, heroCastle } from "@korony/shared";
 import type { UnitId } from "@korony/shared";
-import { buildingIconUrl } from "../../gfx/artUrls";
+import { buildingIconUrl, cityStage, cityUrl } from "../../gfx/artUrls";
 import { unitIconUrl } from "../../gfx/bake";
 import {
   buildReason, factionBuildings, hireInfo, mePlayer, myHero, ownerColor, upgradeInfo,
@@ -26,7 +26,22 @@ export function castlePanel(app: AppApi): PanelSpec {
   const title = t("castle.title", { faction: t(`faction.${me.faction}` as I18nKey) });
   const color = ownerColor(view.state, view.you);
 
+  // city view: the settlement grows from a shelter to a fortress as buildings go up
+  const available = factionBuildings(view);
+  const builtCount = available.filter((id) => me.built[id]).length;
+  const stage = cityStage(builtCount, available.length);
   body.append(
+    h(
+      "div",
+      { class: "city-view", testid: "city-view" },
+      h("img", { src: cityUrl(color === "red" ? "enemy" : "player", stage), alt: "" }),
+      h(
+        "div",
+        { class: "city-caption" },
+        h("b", null, t(`city.stage.${stage}` as I18nKey)),
+        h("span", null, t("city.progress", { n: builtCount, total: available.length })),
+      ),
+    ),
     h("div", { class: "row" }, h("span", null, t("castle.goldRow")), h("b", { testid: "castle-gold" }, fmtNum(me.gold))),
   );
 

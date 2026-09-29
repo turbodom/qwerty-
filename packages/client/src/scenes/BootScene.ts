@@ -6,8 +6,8 @@ import {
 } from "../gfx/art";
 import type { Pic } from "../gfx/art";
 import {
-  bakeArrow, bakeArt, bakeBattleBg, bakeCastle, bakeChest, bakeDot, bakeHero, bakeHex, bakeMine, bakeRock, bakeTerrain,
-  bakeTileMark, bakeUnit, colorHex,
+  bakeArt, bakeBattleBg, bakeCastle, bakeChest, bakeDot, bakeHero, bakeHex, bakeMine, bakeRock, bakeTerrain,
+  bakeMuzzle, bakeSmoke, bakeTileMark, bakeUnit, colorHex,
 } from "../gfx/bake";
 import type { Baked } from "../gfx/bake";
 import {
@@ -115,10 +115,15 @@ export class BootScene extends Phaser.Scene {
     this.add1(TEX.hexActive, bakeHex("active", HEX_R));
     this.add1(TEX.hexSelect, bakeHex("select", HEX_R));
     const rock = this.pic("rock1");
+    const rock2 = this.pic("rock2");
     this.add1(TEX.rock, rock ? paintRock(rock, BATTLE_K) : bakeRock(BATTLE_K));
+    this.add1(TEX.rock2, rock2 ? paintRock(rock2, BATTLE_K) : bakeRock(BATTLE_K));
+    // battle effects: smoke/dust puffs (tinted), muzzle flash, impact spark
+    this.add1(TEX.smoke, bakeSmoke(32));
+    this.add1(TEX.muzzle, bakeMuzzle(24));
+    this.add1(TEX.spark, bakeSmoke(6));
     const field = this.pic("battle-bg");
     this.add1(TEX.battleBg, field ? paintBattleBg(field, BATTLE_W, BATTLE_H) : bakeBattleBg(BATTLE_W, BATTLE_H));
-    this.add1(TEX.arrow, bakeArrow(BATTLE_K));
 
     this.scene.start("MapScene");
     bridge.bootDone();
