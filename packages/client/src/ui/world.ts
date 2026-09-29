@@ -11,6 +11,7 @@ import { fmtNum, t } from "../i18n";
 import type { I18nKey } from "../i18n";
 import { countLabel, engineText, unitName } from "../i18n/catalog";
 import { clear, h } from "./dom";
+import { icon, portraitUrl, resetMapScroll, sectorLevel, sectorName, worldMap } from "./worldMap";
 
 export interface WorldScreenApi {
   back(): void;
@@ -37,15 +38,11 @@ let clanTag = "";
 let donate = "";
 let fetchedAt = 0;
 let clockOffset = 0;
+let zoomed = true;
 
-const COLS = "ABCDEFGHI";
-
-function kindName(kind: SectorKind): string {
-  return t(`world.kind.${kind}` as I18nKey);
-}
 
 export function sectorLabel(s: Pick<WorldSectorView, "kind" | "x" | "y">): string {
-  return `${kindName(s.kind)} ${COLS[s.x] ?? "?"}${s.y + 1}`;
+  return sectorName(s);
 }
 
 /** Server time now (the view carries the server clock; the offset absorbs a skewed phone clock). */
@@ -187,11 +184,12 @@ function render(): void {
   if (!v.me) {
     root.append(mapBlock(v, false), joinCard());
   } else {
-    root.append(statsBar(v), tabs());
+    root.append(statsBar(v));
     if (tab === "map") root.append(mapBlock(v, true), sectorCard(v), armyCard(v));
     else if (tab === "clan") root.append(clanTab(v));
     else if (tab === "rating") root.append(ratingTab(v));
     else root.append(eventsTab(v));
+    root.append(tabs());
   }
   if (report) root.append(reportModal(v, report));
   if (scroller) scroller.scrollTop = scroll;
@@ -218,23 +216,34 @@ function header(): HTMLElement {
 function statsBar(v: WorldView): HTMLElement {
   const me = v.me;
   if (!me) return h("div");
-  const energy = h(
-    "div",
-    { class: "wstat energy" },
-    h("b", null, `⚡ ${t("world.energy", { n: me.energy, max: me.energyMax })}`),
-    me.nextEnergyAt ? h("small", null, t("world.energyNext", { time: fmtDuration(me.nextEnergyAt - serverNow()) })) : null,
-  );
-  const small = energy.querySelector("small");
-  if (small) small.dataset["clock"] = "energy";
+  const clan = clanById(me.clanId);
+  const energyNext = me.nextEnergyAt ? h("small", null, t("world.energyNext", { time: fmtDuration(me.nextEnergyAt - serverNow()) })) : null;
+  if (energyNext) energyNext.dataset["clock"] = "energy";
   return h(
     "div",
-    { class: "wstats", testid: "world-stats" },
-    h("div", { class: "wstat" }, h("span", { class: "coin" }), h("b", { testid: "world-gold" }, fmtNum(me.gold))),
-    energy,
-    h("div", { class: "wstat" }, h("b", null, t("world.power", { n: fmtNum(me.power) }))),
-    h("div", { class: "wstat" }, h("b", null, t("world.rank", { n: me.rank }))),
+    { class: "whud", testid: "world-stats" },
+    h(
+      "div",
+      { class: "whud-me" },
+      h("img", { class: "whud-portrait", src: portraitUrl(), alt: "" }),
+      h(
+        "div",
+        null,
+        h("b", null, me.name, clan ? h("small", null, ` [${clan.tag}]`) : null),
+        h("small", null, `${t("world.rank", { n: me.rank })} · ${t("world.power", { n: fmtNum(me.power) })}`),
+      ),
+    ),
+    h("div", { class: "whud-res" }, h("span", { class: "coin" }), h("b", { testid: "world-gold" }, fmtNum(me.gold))),
+    h(
+      "div",
+      { class: "whud-res energy" },
+      h("span", { class: "bolt" }, "⚡"),
+      h("div", null, h("b", null, `${me.energy}/${me.energyMax}`), energyNext),
+    ),
   );
 }
+
+const TAB_ICONS: Record<Tab, string> = { map: "citadel", clan: "fort", rating: "mine", events: "boss" };
 
 function tabs(): HTMLElement {
   const items: Tab[] = ["map", "clan", "rating", "events"];
@@ -253,7 +262,8 @@ function tabs(): HTMLElement {
             render();
           },
         },
-        t(`world.tab.${id}` as I18nKey),
+        icon(TAB_ICONS[id]),
+        h("span", null, t(`world.tab.${id}` as I18nKey)),
       ),
     ),
   );
@@ -262,40 +272,25 @@ function tabs(): HTMLElement {
 // ================= map =================
 
 function mapBlock(v: WorldView, interactive: boolean): HTMLElement {
-  const me = v.me;
-  const map = h("div", { class: "wmap", testid: "world-map" });
-  map.style.setProperty("--cols", String(v.cols));
-  for (const s of v.sectors) {
-    const cls = ["ws", `k-${s.kind}`];
-    const clan = clanById(s.clanId);
-    if (me && s.holder === me.id) cls.push("mine");
-    else if (me && s.clanId && s.clanId === me.clanId) cls.push("ally");
-    else if (s.holder) cls.push("enemy");
-    if (interactive && s.reachable) cls.push("reach");
-    if (selected === s.id) cls.push("sel");
-    const cell = h(
-      "button",
-      {
-        class: cls.join(" "),
-        testid: `sector-${s.id}`,
-        ariaLabel: `${sectorLabel(s)}. ${holderText(s)}`,
-        onClick: () => {
-          if (!interactive) return;
-          selected = selected === s.id ? null : s.id;
-          render();
-        },
-      },
-      clan ? h("span", { class: "tag" }, clan.tag) : null,
-      s.event === "boss" ? h("img", { class: "ev", src: unitPicUrl("lich"), alt: "" }) : null,
-      s.event === "cache" ? h("img", { class: "ev", src: artUrl("chest"), alt: "" }) : null,
-      me && me.camp === s.id ? h("img", { class: "camp", src: artUrl("hero-player"), alt: t("world.camp") }) : null,
-    );
-    cell.style.left = `${(s.x / v.cols) * 100}%`;
-    cell.style.top = `${(s.y / v.rows) * 100}%`;
-    if (s.holder) cell.style.setProperty("--clan", clan ? (CLAN_COLORS[clan.color] ?? "#fff") : "#e8e2d0");
-    map.append(cell);
-  }
-  return h("div", { class: "wmap-wrap" }, map);
+  return worldMap({
+    view: v,
+    interactive,
+    selected,
+    zoomed,
+    clanColor: (id) => {
+      const c = clanById(id);
+      return c ? (CLAN_COLORS[c.color] ?? null) : null;
+    },
+    onSelect: (id) => {
+      selected = selected === id ? null : id;
+      render();
+    },
+    onToggleZoom: () => {
+      zoomed = !zoomed;
+      resetMapScroll();
+      render();
+    },
+  });
 }
 
 function oddsKey(enemy: number, mine: number): I18nKey {
@@ -315,7 +310,7 @@ function sectorCard(v: WorldView): HTMLElement {
   const card = h(
     "div",
     { class: "card wcard", testid: "sector-card" },
-    h("h3", null, sectorLabel(s)),
+    h("h3", null, h("span", { class: "lvl" }, sectorLevel(s)), sectorLabel(s)),
     h("p", { class: "fx" }, t("world.sectorInfo", { income: rule.income, score: rule.score })),
     s.kind === "citadel" ? h("p", { class: "fx" }, t("world.citadelHint")) : null,
     h("p", null, own ? t("world.yours") : allied && clan ? t("world.clanLand", { name: clan.name }) : holderText(s)),
@@ -679,6 +674,7 @@ function reportModal(v: WorldView, r: WorldBattleReport): HTMLElement {
 
 /** Drops the cached world (logout). */
 export function resetWorldScreen(): void {
+  resetMapScroll();
   view = null;
   loadError = "";
   selected = null;
