@@ -1,5 +1,5 @@
 import { SHOP_ITEMS } from "@korony/shared";
-import type { AuthResponse, PlayerLoadout, ShopItem } from "@korony/shared";
+import type { AuthResponse, PlayerLoadout, ShopItem, WorldAction, WorldResult, WorldView } from "@korony/shared";
 import { apiUrl } from "./config";
 import { t } from "./i18n";
 import { STORAGE_KEYS, readItem, removeItem, writeItem } from "./storage";
@@ -188,6 +188,16 @@ export const api = {
     }
     const u = user ?? (await api.me());
     return loadoutFromOwned(u.owned, u.banner);
+  },
+
+  /** The Seasonal Wasteland as this player sees it. */
+  world(): Promise<WorldView> {
+    return request<WorldView>("GET", "/api/world");
+  },
+
+  /** One Wasteland action; rule violations come back as `result.ok = false` together with the fresh view. */
+  worldAction(action: WorldAction): Promise<{ result: WorldResult; view: WorldView }> {
+    return request("POST", "/api/world/action", { action });
   },
 
   approvePayment(paymentId: string): Promise<unknown> {

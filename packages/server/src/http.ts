@@ -17,6 +17,7 @@ import { PiApiError } from "./pi";
 import type { PiApi } from "./pi";
 import { loadoutFor, publicUser } from "./shop";
 import type { Store, UserRecord } from "./store";
+import { WorldService } from "./world";
 
 export const BODY_LIMIT = "16kb";
 
@@ -37,12 +38,15 @@ export interface AppDeps {
   now?: () => number;
   /** Directory of the built client; `null` disables static serving. Defaults to DEFAULT_CLIENT_DIST. */
   clientDist?: string | null;
-  rateLimits?: { auth?: RateLimitOptions; payments?: RateLimitOptions };
+  rateLimits?: { auth?: RateLimitOptions; payments?: RateLimitOptions; world?: RateLimitOptions };
+  /** The Seasonal Wasteland; defaults to an unsaved world configured from `config`. */
+  world?: WorldService;
 }
 
 // ================= request validation =================
 
 const paymentId = z.string().min(1).max(128).regex(/^[A-Za-z0-9_-]+$/);
+const sectorIndex = z.number().int().min(0).max(10_000);
 const txid = z.string().min(1).max(256).regex(/^[A-Za-z0-9_-]+$/);
 
 export const schemas = {
@@ -56,6 +60,20 @@ export const schemas = {
       .regex(/^[\p{L}\p{N}_\-. ]+$/u),
   }),
   approve: z.object({ paymentId }),
+  worldAction: z.object({
+    action: z.discriminatedUnion("type", [
+      z.object({ type: z.literal("join"), faction: z.enum(["castle", "necropolis"]) }),
+      z.object({ type: z.literal("attack"), sector: sectorIndex }),
+      z.object({ type: z.literal("hire") }),
+      z.object({ type: z.literal("reinforce"), sector: sectorIndex }),
+      z.object({ type: z.literal("withdraw"), sector: sectorIndex }),
+      z.object({ type: z.literal("createClan"), name: z.string().max(64), tag: z.string().max(16) }),
+      z.object({ type: z.literal("joinClan"), clanId: z.string().min(1).max(64) }),
+      z.object({ type: z.literal("leaveClan") }),
+      z.object({ type: z.literal("donate"), amount: z.number().int().min(1).max(1_000_000_000) }),
+      z.object({ type: z.literal("fortify"), sector: sectorIndex }),
+    ]),
+  }),
   complete: z.object({ paymentId, txid }),
   /** The PaymentDTO from Pi.authenticate's onIncompletePaymentFound; only its identifier is used. */
   incomplete: z.object({ payment: z.looseObject({ identifier: paymentId }) }),
@@ -151,6 +169,9 @@ export function createApp(deps: AppDeps): Express {
   const auth = deps.auth ?? createSessionAuth(config.sessionSecret);
   const payments = new PaymentService({ store, pi, now });
   const startedAt = now();
+  const world = deps.world ?? new WorldService({
+    now, dayMs: config.worldDayMinutes * 60_000, seasonDays: config.worldSeasonDays,
+  });
 
   const app = express();
   app.disable("x-powered-by");
@@ -163,6 +184,7 @@ export function createApp(deps: AppDeps): Express {
   // Rate limits run before body parsing so floods cost as little as possible.
   api.use("/auth", rateLimit(deps.rateLimits?.auth ?? { windowMs: 60_000, max: 30 }, now));
   api.use("/payments", rateLimit(deps.rateLimits?.payments ?? { windowMs: 60_000, max: 60 }, now));
+  api.use("/world", rateLimit(deps.rateLimits?.world ?? { windowMs: 60_000, max: 120 }, now));
   api.use(express.json({ limit: BODY_LIMIT }));
   const signedIn = requireSession(auth);
   /** Pi payments need a Pi account: guests are turned away before anything reaches the Pi API. */
@@ -230,6 +252,16 @@ export function createApp(deps: AppDeps): Express {
   api.post("/payments/incomplete", signedIn, piAccount, async (req, res) => {
     const body = parseBody(schemas.incomplete, req.body);
     res.json(await payments.incomplete(sessionOf(res), body.payment.identifier));
+  });
+
+  // Seasonal Wasteland: rule violations come back as `result.ok = false` with the current view, not as HTTP errors
+  api.get("/world", signedIn, async (_req, res) => {
+    res.json(await world.view(sessionOf(res)));
+  });
+
+  api.post("/world/action", signedIn, async (req, res) => {
+    const { action } = parseBody(schemas.worldAction, req.body);
+    res.json(await world.act(sessionOf(res), action));
   });
 
   api.use((_req, res) => {

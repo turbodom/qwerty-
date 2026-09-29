@@ -19,3 +19,4 @@ export * from "./battle";
 export * from "./ai";
 export * from "./game";
 export * from "./events";
+export * from "./world";

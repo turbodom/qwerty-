@@ -32,8 +32,9 @@ import { spellbookPanel } from "./panels/spellbook";
 import type { AppApi, PanelFactory } from "./panels/types";
 import { lobbyScreen, loginScreen, waitingScreen } from "./screens";
 import type { ScreenApi } from "./screens";
+import { resetWorldScreen, worldScreen } from "./world";
 
-type Screen = "login" | "lobby" | "waiting" | "game";
+type Screen = "login" | "lobby" | "waiting" | "game" | "world";
 
 const END_DAY_COOLDOWN_MS = 700;
 
@@ -157,6 +158,10 @@ export class App implements AppApi, ScreenApi, UiHooks {
     if (s === "login") this.screenEl.append(loginScreen(this));
     else if (s === "lobby") this.screenEl.append(lobbyScreen(this));
     else if (s === "waiting") this.screenEl.append(waitingScreen(this, this.waitingCode, this.waitingStatus));
+    else if (s === "world") {
+      this.screenEl.append(worldScreen({ back: () => this.renderScreen("lobby"), toast: (text, kind) => this.toast(text, kind) }));
+    }
+    this.screenEl.classList.toggle("wide", s === "world");
     this.hintEl.hidden = s !== "game";
     this.renderTop();
     this.renderBar();
@@ -225,6 +230,7 @@ export class App implements AppApi, ScreenApi, UiHooks {
   logout(): void {
     api.logout();
     this.currentUser = null;
+    resetWorldScreen();
     this.renderScreen("login");
   }
 
@@ -269,6 +275,16 @@ export class App implements AppApi, ScreenApi, UiHooks {
 
   openShop(): void {
     this.openPanel(shopPanel);
+  }
+
+  openWorld(): void {
+    if (!getToken() || !this.currentUser) {
+      this.toast(t("world.needsLogin"), "error");
+      this.renderScreen("login");
+      return;
+    }
+    this.closePanel();
+    this.renderScreen("world");
   }
 
   cancelOnline(): void {

@@ -4,7 +4,7 @@
  * (toasts and action errors). `@korony/shared` stays Russian-only; Russian is returned unchanged.
  */
 import {
-  ARTIFACTS, BUILDINGS, MAX_ARMY_STACKS, QUESTS, SETS, SKILLS, SLOTS, SPELLS, STAT_NAMES, UNITS,
+  ARTIFACTS, BUILDINGS, CLAN_CREATE_COST, FORTIFY_COST, MAX_ARMY_STACKS, QUESTS, SETS, SKILLS, SLOTS, SPELLS, STAT_NAMES, UNITS,
 } from "@korony/shared";
 import type {
   ArtifactDef, ArtifactId, BuildingId, QuestId, SetId, ShopItem, SkillId, SlotId, SpellId, StatKey, UnitId,
@@ -188,6 +188,35 @@ export function countLabel(hint: string): string {
 /** Exact Russian messages of the engine (action errors, toasts) and the match server. */
 const EN_MESSAGES: Record<string, string> = {
   "Сначала закончите бой": "Finish the battle first",
+  // Seasonal Wasteland
+  "Вы уже в Пустоши": "You are already in the Wasteland",
+  "Неизвестная фракция": "Unknown faction",
+  "Сначала вступите в Пустошь": "Join the Wasteland first",
+  "Нет такого сектора": "No such sector",
+  "Этот сектор уже ваш": "This sector is already yours",
+  "Сектор слишком далеко: нападать можно рядом со своей землёй": "Too far: you can attack next to your land",
+  "Нет энергии: она восстанавливается со временем": "No energy: it refills over time",
+  "У вас нет армии: наймите отряды в лагере": "You have no army: hire troops in your camp",
+  "Некого нанять или не хватает золота": "Nobody to hire or not enough gold",
+  "Подкреплять можно только свои сектора": "You can reinforce only your own sectors",
+  "Армия слишком мала для подкрепления": "Your army is too small to leave reinforcements",
+  "Забирать войска можно только из своих секторов": "You can withdraw only from your own sectors",
+  "В секторе некого забирать": "There is nobody to withdraw",
+  "В армии нет места для новых отрядов": "Your army has no room for more unit types",
+  "Сначала выйдите из своего клана": "Leave your clan first",
+  "Название клана: от 3 до 24 букв или цифр": "Clan name: 3 to 24 letters or digits",
+  "Тег клана: от 2 до 4 букв или цифр": "Clan tag: 2 to 4 letters or digits",
+  "Такое название или тег уже заняты": "That name or tag is taken",
+  [`Основать клан стоит ${CLAN_CREATE_COST} золота`]: `Founding a clan costs ${CLAN_CREATE_COST} gold`,
+  "Нет такого клана": "No such clan",
+  "В клане нет мест": "The clan is full",
+  "Вы не в клане": "You are not in a clan",
+  "Неверная сумма": "Invalid amount",
+  "Укреплять сектора может только глава клана": "Only the clan leader can fortify sectors",
+  "Укреплять можно только земли клана": "You can fortify only clan land",
+  [`Нужно ${FORTIFY_COST} золота в казне клана`]: `The clan treasury needs ${FORTIFY_COST} gold`,
+  "Недопустимый игрок": "Invalid player",
+  "Неизвестное действие": "Unknown action",
   "Вы уже завершили день. Дождитесь соперника": "You have already ended the day. Wait for your opponent",
   "Вы уже завершили день": "You have already ended the day",
   "Ваш герой погиб": "Your hero has fallen",

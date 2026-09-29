@@ -20,6 +20,13 @@ export interface Config {
   reconnectSeconds: number;
   /** Express "trust proxy" setting (false: use the socket address as the client IP). */
   trustProxy: boolean | number | string;
+  /** Seasonal Wasteland: length of a world day and of a season. */
+  worldDayMinutes: number;
+  worldSeasonDays: number;
+  /** Where the world is saved: an Upstash Redis REST endpoint (preferred), a JSON file, or nowhere (memory only). */
+  worldFile: string | null;
+  upstashUrl: string | null;
+  upstashToken: string | null;
 }
 
 export const DEV_SESSION_SECRET = "dev-only-session-secret-do-not-use-in-production";
@@ -69,6 +76,11 @@ const envSchema = z.object({
   DAY_SECONDS: intFromEnv(5, 3600),
   RECONNECT_SECONDS: intFromEnv(0, 3600),
   TRUST_PROXY: z.preprocess(emptyToUndefined, z.string().optional()),
+  WORLD_DAY_MINUTES: intFromEnv(1, 7 * 24 * 60),
+  WORLD_SEASON_DAYS: intFromEnv(1, 120),
+  WORLD_FILE: z.preprocess(emptyToUndefined, z.string().optional()),
+  UPSTASH_REDIS_REST_URL: z.preprocess(emptyToUndefined, z.url({ protocol: /^https$/ }).optional()),
+  UPSTASH_REDIS_REST_TOKEN: z.preprocess(emptyToUndefined, z.string().optional()),
 });
 
 export class ConfigError extends Error {
@@ -115,6 +127,12 @@ export function loadConfig(
     warn("guest login is on: anyone can play without Pi. Set ALLOW_GUEST_LOGIN=false before the Pi Mainnet listing");
   }
   if (production && !e.PI_API_KEY) warn("PI_API_KEY is not set: payments are disabled");
+  if (!!e.UPSTASH_REDIS_REST_URL !== !!e.UPSTASH_REDIS_REST_TOKEN) {
+    throw new ConfigError("UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN must be set together");
+  }
+  if (production && !e.UPSTASH_REDIS_REST_URL && !e.WORLD_FILE) {
+    warn("the Seasonal Wasteland is not saved anywhere: set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN to keep it across restarts");
+  }
 
   return {
     env: mode,
@@ -127,5 +145,10 @@ export function loadConfig(
     daySeconds: e.DAY_SECONDS ?? 90,
     reconnectSeconds: e.RECONNECT_SECONDS ?? 60,
     trustProxy: parseTrustProxy(e.TRUST_PROXY),
+    worldDayMinutes: e.WORLD_DAY_MINUTES ?? 24 * 60,
+    worldSeasonDays: e.WORLD_SEASON_DAYS ?? 28,
+    worldFile: e.WORLD_FILE ?? null,
+    upstashUrl: e.UPSTASH_REDIS_REST_URL ?? null,
+    upstashToken: e.UPSTASH_REDIS_REST_TOKEN ?? null,
   };
 }
