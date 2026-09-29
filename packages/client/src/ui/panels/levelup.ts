@@ -1,6 +1,7 @@
 import { mePlayer, myHero } from "../../game/helpers";
 import { t } from "../../i18n";
 import { skillDesc, skillName } from "../../i18n/catalog";
+import { skillIconUrl } from "../../gfx/artUrls";
 import { h } from "../dom";
 import type { AppApi, PanelSpec } from "./types";
 
@@ -22,7 +23,7 @@ export function levelUpPanel(app: AppApi): PanelSpec {
       h(
         "button",
         {
-          class: "btn ghost",
+          class: "btn ghost with-icon",
           testid: `skill-${i}`,
           onClick: async () => {
             // one choice per pair: a double tap must not spend the next queued pair too
@@ -37,7 +38,8 @@ export function levelUpPanel(app: AppApi): PanelSpec {
             }
           },
         },
-        `${skillName(id)}: ${skillDesc(id)}`,
+        h("img", { src: skillIconUrl(id), alt: "" }),
+        h("span", null, `${skillName(id)}: ${skillDesc(id)}`),
       ),
     );
   });

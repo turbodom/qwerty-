@@ -2,6 +2,7 @@ import { SPELL_IDS, SPELLS, healAmount, heroBoltDamage } from "@korony/shared";
 import type { ActiveBattle, Seat, SpellId } from "@korony/shared";
 import { t } from "../../i18n";
 import { buildingName, spellName } from "../../i18n/catalog";
+import { spellIconUrl } from "../../gfx/artUrls";
 import { h } from "../dom";
 import type { AppApi, PanelFactory, PanelSpec } from "./types";
 
@@ -29,7 +30,7 @@ export function spellbookPanel(ab: ActiveBattle, side: Seat, onPick: (spell: Spe
         h(
           "button",
           {
-            class: "btn ghost",
+            class: "btn ghost with-icon",
             testid: `spell-${id}`,
             disabled: !known || used,
             onClick: () => {
@@ -37,8 +38,13 @@ export function spellbookPanel(ab: ActiveBattle, side: Seat, onPick: (spell: Spe
               onPick(id);
             },
           },
-          label,
-          !known && req ? h("span", { class: "sub-label" }, t("spell.needs", { building: buildingName(req) })) : null,
+          h("img", { src: spellIconUrl(id), alt: "" }),
+          h(
+            "span",
+            null,
+            label,
+            !known && req ? h("span", { class: "sub-label" }, t("spell.needs", { building: buildingName(req) })) : null,
+          ),
         ),
       );
     }

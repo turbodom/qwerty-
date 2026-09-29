@@ -3,10 +3,19 @@ import { isPiBrowser, purchase } from "../../pi";
 import { t } from "../../i18n";
 import { shopItemDesc, shopItemName } from "../../i18n/catalog";
 import type { I18nKey } from "../../i18n";
+import { artUrl } from "../../gfx/artUrls";
 import { h } from "../dom";
 import type { AppApi, PanelSpec } from "./types";
 
 let buying: string | null = null;
+
+function itemIcon(item: ShopItem): string {
+  const g = item.grants;
+  if (g.banner) return artUrl("shop-banner");
+  if (g.premiumDays) return artUrl("shop-premium");
+  if (g.startArtifact) return artUrl(`art-${g.startArtifact}`);
+  return artUrl("shop-treasury");
+}
 
 function priceText(n: number): string {
   return t("shop.price", { price: String(n) });
@@ -47,6 +56,7 @@ export function shopPanel(app: AppApi): PanelSpec {
       h(
         "div",
         { class: "item-row", testid: `shop-${item.id}` },
+        h("img", { src: itemIcon(item), alt: "" }),
         h(
           "div",
           { class: "grow" },

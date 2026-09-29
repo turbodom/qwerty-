@@ -3,6 +3,7 @@ import { ROOM_CODE_MAX } from "@korony/shared";
 import type { User } from "../api";
 import { t } from "../i18n";
 import { STORAGE_KEYS, readItem } from "../storage";
+import { artUrl } from "../gfx/artUrls";
 import { h } from "./dom";
 import { settingsBlock } from "./panels/misc";
 
@@ -28,8 +29,7 @@ const CODE_RE = new RegExp(`^[A-Za-z0-9]{1,${ROOM_CODE_MAX}}$`);
 const NAME_RE = /^[\p{L}\p{N}_-]{2,20}$/u;
 
 function crest(): HTMLElement {
-  const img = h("img", { class: "crest", src: "/favicon.svg", alt: "" });
-  return img;
+  return h("img", { class: "crest", src: artUrl("logo"), alt: "" });
 }
 
 function header(): HTMLElement[] {

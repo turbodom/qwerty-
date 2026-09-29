@@ -5,6 +5,7 @@ import { ApiError, api, getToken, loadoutFromOwned, setToken } from "../api";
 import type { User } from "../api";
 import { sfx, unlockAudio } from "../audio";
 import { IS_DEV } from "../config";
+import { artUrl } from "../gfx/artUrls";
 import { bridge } from "../game/bridge";
 import type { BattleBarState, UiHooks } from "../game/bridge";
 import { Director } from "../game/director";
@@ -600,7 +601,11 @@ export class App implements AppApi, ScreenApi, UiHooks {
         h(
           "div",
           { class: "info" },
-          h("div", { class: `portrait ${color === "red" ? "red" : "blue"}` }, hero.name.charAt(0)),
+          h("img", {
+            class: `portrait ${color === "red" ? "red" : "blue"}`,
+            src: artUrl(color === "red" ? "portrait-necro" : "portrait-knight"),
+            alt: "",
+          }),
           h(
             "div",
             { style: "white-space:nowrap" },
