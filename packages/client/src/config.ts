@@ -13,6 +13,12 @@ export const SERVER_URL: string = (readString("VITE_SERVER_URL") ?? "").trim().r
 /** Pi SDK sandbox mode (Developer Portal sandbox). */
 export const PI_SANDBOX: boolean = readString("VITE_PI_SANDBOX") === "true";
 
+/**
+ * Pi login and payments. Off by default so the game is tested with the guest login in Pi Browser and in
+ * a normal browser alike; set VITE_PI_LOGIN=true when Pi authentication is switched on.
+ */
+export const PI_LOGIN: boolean = readString("VITE_PI_LOGIN") === "true";
+
 /** True in the Vite dev server. */
 export const IS_DEV: boolean = env["DEV"] === true;
 
