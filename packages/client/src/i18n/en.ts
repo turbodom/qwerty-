@@ -167,6 +167,7 @@ export const en: Record<I18nKey, string> = {
   "hero.slots": "Equipment",
   "hero.empty": "empty",
   "hero.unequip": "Take off",
+  "hero.unequipHint": "Tap a worn item to take it off. The more gear the hero wears, the tougher they look.",
   "hero.equip": "Equip",
   "hero.bag": "Backpack",
   "hero.bagEmpty": "The backpack is empty. Look for artifacts on the map.",

@@ -45,8 +45,10 @@ export const TEX = {
 /** Number of plain-tile decoration variants (0 = no grass speck). */
 export const PLAIN_VARIANTS = 4;
 
-/** Set by BootScene: map tiles come from painted textures and are picked by paintVariant(x, y). */
-export const TERRAIN_PAINTED = { value: false };
+/** Texture of the painted landscape of map `mapId` (absent when it did not load). */
+export function mapKey(mapId: string): string {
+  return `landscape-${mapId}`;
+}
 
 export function terrainKey(t: TerrainChar, checker: 0 | 1, variant: number): string {
   const name = t === "." ? "plain" : t === "F" ? "forest" : t === "M" ? "mount" : "water";

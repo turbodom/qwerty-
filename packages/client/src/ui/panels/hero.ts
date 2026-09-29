@@ -1,5 +1,6 @@
 import { ARTIFACTS, SETS, SLOTS, effectiveStat, expToNext, heroSpells, maxMovement, setCounts } from "@korony/shared";
-import type { ArmyStack, GameState, SetId } from "@korony/shared";
+import type { ArmyStack, GameState, SetId, SlotId } from "@korony/shared";
+import { gearTier, heroBodyUrl } from "../../gfx/artUrls";
 import { artIconUrl, unitIconUrl } from "../../gfx/bake";
 import { mePlayer, myHero, ownerColor } from "../../game/helpers";
 import { fmtNum, t } from "../../i18n";
@@ -8,6 +9,10 @@ import type { I18nKey } from "../../i18n";
 import { h } from "../dom";
 import { levelUpPanel } from "./levelup";
 import type { AppApi, PanelSpec } from "./types";
+
+/** Slots shown left and right of the hero figure. */
+const LEFT_SLOTS: readonly SlotId[] = ["head", "neck", "shoulders", "torso", "cloak"];
+const RIGHT_SLOTS: readonly SlotId[] = ["weapon", "shield", "ring1", "ring2", "feet"];
 
 /** Army stacks as chips; `compact` (the action bar) shows icon and count only, the name goes to the tooltip. */
 export function armyChips(state: GameState, owner: string, army: readonly ArmyStack[], compact = false): HTMLElement[] {
@@ -65,30 +70,50 @@ export function heroPanel(app: AppApi): PanelSpec {
   const spells = heroSpells(view.state, hero).map((id) => spellName(id));
   body.append(h("div", { class: "fx" }, t("hero.spells", { list: spells.join(", ") })));
 
-  // equipment: 10 slots
-  body.append(h("div", { class: "section-title" }, t("hero.slots")));
-  const slots = h("div", { class: "slots" });
-  for (const s of SLOTS) {
-    const id = hero.equipped[s.id];
-    const a = id ? ARTIFACTS[id] : undefined;
-    slots.append(
+  // equipment: the hero figure between the 10 slots; the figure gets heavier gear as more slots fill
+  const color = ownerColor(view.state, view.you);
+  const slot = (id: SlotId): HTMLElement => {
+    const art = hero.equipped[id];
+    const a = art ? ARTIFACTS[art] : undefined;
+    const label = slotName(id);
+    if (!a || !art) {
+      return h(
+        "div",
+        { class: "pd-slot", testid: `slot-${id}`, title: `${label}: ${t("hero.empty")}` },
+        h("span", { class: "pd-empty" }),
+        h("span", { class: "pd-name" }, label),
+      );
+    }
+    return h(
+      "button",
+      {
+        type: "button",
+        class: `pd-slot filled r${a.rarity}`,
+        testid: `slot-${id}`,
+        title: `${artifactName(art)}: ${artifactFx(a)}. ${t("hero.unequip")}`,
+        ariaLabel: `${label}: ${artifactName(art)}. ${t("hero.unequip")}`,
+        onClick: () => void app.act({ type: "unequip", slot: id }),
+      },
+      h("img", { src: artIconUrl(art), alt: "" }),
+      h("span", { class: "pd-name" }, label),
+    );
+  };
+  const worn = SLOTS.filter((s) => hero.equipped[s.id]).length;
+  body.append(
+    h("div", { class: "section-title" }, t("hero.slots")),
+    h(
+      "div",
+      { class: "paperdoll" },
+      h("div", { class: "pd-col" }, LEFT_SLOTS.map(slot)),
       h(
         "div",
-        { class: "slot", testid: `slot-${s.id}` },
-        a && id ? h("img", { src: artIconUrl(id), alt: "" }) : h("span", { class: "empty-ico" }),
-        h("span", { class: "slot-name" }, slotName(s.id)),
-        a && id ? h("b", { class: `r${a.rarity}` }, artifactName(id)) : h("span", { class: "fx" }, t("hero.empty")),
-        a
-          ? h(
-              "button",
-              { type: "button", onClick: () => void app.act({ type: "unequip", slot: s.id }) },
-              t("hero.unequip"),
-            )
-          : null,
+        { class: "pd-figure" },
+        h("img", { src: heroBodyUrl(color === "red" ? "enemy" : "player", gearTier(worn)), alt: hero.name }),
       ),
-    );
-  }
-  body.append(slots);
+      h("div", { class: "pd-col" }, RIGHT_SLOTS.map(slot)),
+    ),
+    h("p", { class: "fx" }, t("hero.unequipHint")),
+  );
 
   // sets
   const counts = setCounts(hero);

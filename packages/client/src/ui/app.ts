@@ -603,7 +603,7 @@ export class App implements AppApi, ScreenApi, UiHooks {
           { class: "info" },
           h("img", {
             class: `portrait ${color === "red" ? "red" : "blue"}`,
-            src: artUrl(color === "red" ? "portrait-necro" : "portrait-knight"),
+            src: artUrl(color === "red" ? "portrait-enemy" : "portrait-player"),
             alt: "",
           }),
           h(

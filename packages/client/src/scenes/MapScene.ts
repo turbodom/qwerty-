@@ -7,11 +7,10 @@ import { sfx } from "../audio";
 import { bridge } from "../game/bridge";
 import { bannerOf, mapLockReason, mePlayer, myBattle, myHero, objectAtView, ownerColor } from "../game/helpers";
 import { nextLeg, planMove } from "../game/pathing";
-import { paintVariant } from "../gfx/art";
 import { tileDeco } from "../gfx/draw";
 import type { TerrainChar } from "../gfx/draw";
 import {
-  BATTLE_K, MAP_K, PLAIN_VARIANTS, TERRAIN_PAINTED, TEX, TILE, artKey, castleKey, heroKey, mineKey, originOf, terrainKey, unitKey,
+  BATTLE_K, MAP_K, PLAIN_VARIANTS, TEX, TILE, artKey, castleKey, heroKey, mapKey, mineKey, originOf, terrainKey, unitKey,
 } from "../gfx/keys";
 import { fmtNum, t } from "../i18n";
 import type { I18nKey } from "../i18n";
@@ -169,6 +168,21 @@ export class MapScene extends Phaser.Scene {
     this.mapSig = `${s.id}|${s.mapId}|${s.cols}x${s.rows}`;
     for (const i of this.terrain) i.destroy();
     this.terrain = [];
+    // a painted landscape replaces the terrain tiles when the map has one
+    if (this.textures.exists(mapKey(s.mapId))) {
+      const img = this.add.image(0, 0, mapKey(s.mapId)).setOrigin(0, 0).setDepth(0);
+      img.setDisplaySize(s.cols * TILE, s.rows * TILE);
+      this.terrain.push(img);
+    } else {
+      this.buildTiles(s);
+    }
+    for (const h of this.heroes.values()) h.destroy();
+    this.heroes.clear();
+    this.syncAll();
+    this.layout();
+  }
+
+  private buildTiles(s: GameState): void {
     for (let y = 0; y < s.rows; y++) {
       const row = s.terrain[y] ?? "";
       for (let x = 0; x < s.cols; x++) {
@@ -176,8 +190,7 @@ export class MapScene extends Phaser.Scene {
         const deco = tileDeco(x, y);
         const checker = ((x + y) % 2) as 0 | 1;
         let variant = 0;
-        if (TERRAIN_PAINTED.value) variant = paintVariant(x, y);
-        else if (ch === "." && deco[0] < 0.35) variant = 1 + Math.floor(deco[1] * (PLAIN_VARIANTS - 1));
+        if (ch === "." && deco[0] < 0.35) variant = 1 + Math.floor(deco[1] * (PLAIN_VARIANTS - 1));
         else if (ch === "W" && deco[0] < 0.5) variant = 1;
         const key = this.textures.exists(terrainKey(ch, checker, variant)) ? terrainKey(ch, checker, variant) : terrainKey(".", checker, 0);
         const img = this.add.image(x * TILE, y * TILE, key).setOrigin(0, 0).setDepth(0);
@@ -185,10 +198,6 @@ export class MapScene extends Phaser.Scene {
         this.terrain.push(img);
       }
     }
-    for (const h of this.heroes.values()) h.destroy();
-    this.heroes.clear();
-    this.syncAll();
-    this.layout();
   }
 
   private syncAll(): void {
