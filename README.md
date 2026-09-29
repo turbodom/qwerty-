@@ -17,7 +17,21 @@ npm run dev:server          # сервер на http://localhost:2567
 npm run dev:client          # клиент на http://localhost:5173
 ```
 
-Вне Pi Browser работает вход разработчика (`ALLOW_DEV_LOGIN=true`). В Pi Browser игра входит через Pi SDK.
+## Вход
+
+- В обычном браузере (Chrome, Safari и другие) игра предлагает вход гостем по имени. Гостю доступны игра против ИИ и онлайн-партии, покупки за Pi нет.
+- В Pi Browser игра входит через Pi SDK, покупки идут через Pi.
+- Гостевой вход включён по умолчанию, в том числе на боевом сервере. Перед подачей в Pi Mainnet его нужно выключить: `ALLOW_GUEST_LOGIN=false`, потому что Pi разрешает только вход через Pi.
+
+## Запуск на сервере
+
+```bash
+npm install
+npm run build                                   # собирает клиент в packages/client/dist
+NODE_ENV=production SESSION_SECRET=<32+ символов> npm start -w @korony/server
+```
+
+Сервер сам отдаёт собранный клиент, игра открывается на `http://<сервер>:2567`.
 
 ## Проверки
 
