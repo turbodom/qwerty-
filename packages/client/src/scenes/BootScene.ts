@@ -1,7 +1,7 @@
 import Phaser from "phaser";
-import { ARTIFACT_IDS, UNIT_IDS } from "@korony/shared";
+import { ARTIFACT_IDS, MAPS, UNIT_IDS } from "@korony/shared";
 import {
-  PAINT_VARIANTS, SCENE_ART, artUrl, paintArtifact, paintBattleBg, paintCastle, paintChest, paintHero, paintMine, paintRock, paintTerrain, paintUnit,
+  SCENE_ART, artUrl, mapArtName, paintArtifact, paintBattleBg, paintCastle, paintChest, paintHero, paintMine, paintRock, paintUnit,
   unitArtName,
 } from "../gfx/art";
 import type { Pic } from "../gfx/art";
@@ -11,8 +11,8 @@ import {
 } from "../gfx/bake";
 import type { Baked } from "../gfx/bake";
 import {
-  BANNER_KEYS, BATTLE_H, TERRAIN_PAINTED, BATTLE_K, BATTLE_W, COLOR_KEYS, HEX_R, MAP_K, ORIGINS, PLAIN_VARIANTS, TEX, TILE, artKey, castleKey, heroKey,
-  mineKey, terrainKey, unitKey,
+  BANNER_KEYS, BATTLE_H, BATTLE_K, BATTLE_W, COLOR_KEYS, HEX_R, MAP_K, ORIGINS, PLAIN_VARIANTS, TEX, TILE, artKey, castleKey, heroKey,
+  mapKey, mineKey, terrainKey, unitKey,
 } from "../gfx/keys";
 import { BANNER_COLORS } from "../gfx/draw";
 import type { TerrainChar } from "../gfx/draw";
@@ -38,6 +38,8 @@ export class BootScene extends Phaser.Scene {
   preload(): void {
     const names = [...SCENE_ART, ...UNIT_IDS.map(unitArtName), ...ARTIFACT_IDS.map((id) => `art-${id}`)];
     for (const n of names) this.load.image(PIC_PREFIX + n, artUrl(n));
+    // painted map landscapes go straight to Phaser: MapScene draws them under the objects
+    for (const id of Object.keys(MAPS)) this.load.image(mapKey(id), artUrl(mapArtName(id)));
   }
 
   /** A loaded picture, or null when it failed to load (the drawing is used instead). */
@@ -60,36 +62,22 @@ export class BootScene extends Phaser.Scene {
     }
     this.add1(TEX.pixel, { canvas: px, origin: { x: 0, y: 0 } });
 
-    // terrain tiles: checker shade x decoration variant
-    const grass = this.pic("tex-grass");
-    const painted = grass
-      ? {
-          grass,
-          water: this.pic("tex-water"),
-          forest: [this.pic("forest1"), this.pic("forest2")] as [Pic | null, Pic | null],
-          mount: [this.pic("mount1"), this.pic("mount2")] as [Pic | null, Pic | null],
-        }
-      : null;
-    // painted tiles use PAINT_VARIANTS texture cells (see paintVariant); drawn tiles their decoration variants
+    // terrain tiles (used when a map has no painted landscape): checker shade x decoration variant
     const terrains: TerrainChar[] = [".", "F", "M", "W"];
-    TERRAIN_PAINTED.value = !!painted;
     for (const t of terrains) {
-      const variants = painted ? PAINT_VARIANTS : t === "." ? PLAIN_VARIANTS : t === "W" ? 2 : 1;
+      const variants = t === "." ? PLAIN_VARIANTS : t === "W" ? 2 : 1;
       for (const checker of [0, 1] as const) {
-        for (let v = 0; v < variants; v++) {
-          const p = painted ? paintTerrain(painted, t, checker, v, MAP_K) : null;
-          this.add1(terrainKey(t, checker, v), p ?? bakeTerrain(t, checker, painted ? 0 : v, MAP_K));
-        }
+        for (let v = 0; v < variants; v++) this.add1(terrainKey(t, checker, v), bakeTerrain(t, checker, v, MAP_K));
       }
     }
 
     // castles and heroes per owner colour and banner, mines per owner, chest, artifacts
-    // red is seat 1, which plays the necropolis
+    // red is seat 1, the enemy side
     const mine = this.pic("mine");
     const chest = this.pic("chest");
     for (const c of COLOR_KEYS) {
-      const castle = this.pic(c === "red" ? "castle-necro" : "castle-castle");
-      const hero = this.pic(c === "red" ? "hero-necro" : "hero-knight");
+      const castle = this.pic(c === "red" ? "base-enemy" : "base-player");
+      const hero = this.pic(c === "red" ? "hero-enemy" : "hero-player");
       for (const b of BANNER_KEYS) {
         const flag = BANNER_COLORS[b] ?? colorHex(c);
         this.add1(castleKey(c, b), castle ? paintCastle(castle, colorHex(c), flag, MAP_K) : bakeCastle(c, b, MAP_K));

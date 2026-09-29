@@ -224,7 +224,7 @@ export class BattleScene extends Phaser.Scene {
     const band = this.add.rectangle(BATTLE_W / 2, BATTLE_H / 2, BATTLE_W, 150 * K, 0x000000, 0.62).setDepth(900);
     const text = this.add
       .text(BATTLE_W / 2, BATTLE_H / 2, won ? t("battle.victory") : t("battle.defeat"), {
-        fontFamily: "Alegreya SC, Georgia, serif",
+        fontFamily: "Oswald, Arial Narrow, sans-serif",
         fontSize: `${Math.round(46 * K)}px`,
         fontStyle: "bold",
         color: won ? "#f0d38a" : "#ff8a7a",

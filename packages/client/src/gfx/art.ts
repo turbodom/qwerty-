@@ -1,23 +1,21 @@
 /**
  * Painted art (generated pictures in public/art). BootScene loads them and bakes them into the same
  * texture boxes as the prototype drawings, so the scenes keep their geometry. A picture that fails to
- * load falls back to the drawing from draw.ts.
+ * load falls back to the drawing from draw.ts. The adventure map is one painted landscape per map
+ * (map-<id>), drawn under the objects instead of terrain tiles.
  */
 import { UNITS } from "@korony/shared";
 import type { UnitId } from "@korony/shared";
 import { bake } from "./bake";
 import type { Baked, Box } from "./bake";
 import { upgradedMarker } from "./draw";
-export { artUrl, unitArtName } from "./artUrls";
-import type { TerrainChar } from "./draw";
+export { artUrl, mapArtName, unitArtName } from "./artUrls";
 
 export type Pic = CanvasImageSource & { width: number; height: number };
 
 /** File names (without extension) that BootScene loads into Phaser. */
 export const SCENE_ART: readonly string[] = [
-  "tex-grass", "tex-water", "forest1", "forest2", "mount1", "mount2",
-  "castle-castle", "castle-necro", "hero-knight", "hero-necro", "mine", "chest",
-  "battle-bg", "rock1", "rock2",
+  "base-player", "base-enemy", "hero-player", "hero-enemy", "mine", "chest", "battle-bg", "rock1", "rock2",
 ];
 
 /** Draws `pic` scaled to fit maxW x maxH, centred on cx with its bottom edge at `bottom`. */
@@ -69,57 +67,6 @@ function pennant(ctx: CanvasRenderingContext2D, x: number, y: number, h: number,
   ctx.fill();
   ctx.stroke();
   ctx.restore();
-}
-
-/** Map tiles take one cell of a PAINT_GRID x PAINT_GRID split of a seamless texture, so the texture keeps its detail. */
-export const PAINT_GRID = 4;
-export const PAINT_VARIANTS = PAINT_GRID * PAINT_GRID;
-
-/** Texture cell of map tile (x, y), used as the tile's variant when the terrain is painted. */
-export function paintVariant(x: number, y: number): number {
-  return (x % PAINT_GRID) + (y % PAINT_GRID) * PAINT_GRID;
-}
-
-function tile(ctx: CanvasRenderingContext2D, pic: Pic, checker: 0 | 1, variant: number, T: number): void {
-  const cw = pic.width / PAINT_GRID;
-  const ch = pic.height / PAINT_GRID;
-  ctx.drawImage(pic, (variant % PAINT_GRID) * cw, Math.floor(variant / PAINT_GRID) * ch, cw, ch, 0, 0, T, T);
-  if (checker) {
-    ctx.fillStyle = "rgba(0,0,0,.05)";
-    ctx.fillRect(0, 0, T, T);
-  }
-}
-
-export interface PaintedTerrain {
-  grass: Pic;
-  water: Pic | null;
-  forest: [Pic | null, Pic | null];
-  mount: [Pic | null, Pic | null];
-}
-
-/** Terrain tile (prototype size 42) painted from textures; null when a needed picture is missing. */
-export function paintTerrain(p: PaintedTerrain, t: TerrainChar, checker: 0 | 1, variant: number, scale: number): Baked | null {
-  const T = 42;
-  const box: Box = { x0: 0, y0: 0, x1: T, y1: T };
-  const water = p.water;
-  if (t === "W") return water ? bake(box, scale, (ctx) => tile(ctx, water, checker, variant, T)) : null;
-  if (t === "F") {
-    const f = p.forest[variant % 2] ?? p.forest[0];
-    if (!f) return null;
-    return bake(box, scale, (ctx) => {
-      tile(ctx, p.grass, checker, variant, T);
-      fit(ctx, f, T / 2, T, T, T);
-    });
-  }
-  if (t === "M") {
-    const m = p.mount[variant % 2] ?? p.mount[0];
-    if (!m) return null;
-    return bake(box, scale, (ctx) => {
-      tile(ctx, p.grass, checker, variant, T);
-      fit(ctx, m, T / 2, T - 1, T, T - 2);
-    });
-  }
-  return bake(box, scale, (ctx) => tile(ctx, p.grass, checker, variant, T));
 }
 
 export function paintCastle(pic: Pic, color: string, flag: string, scale: number): Baked {
