@@ -1,7 +1,7 @@
 import { randomInt } from "node:crypto";
 import { ErrorCode, Protocol, Room, ServerError } from "colyseus";
 import type { AuthContext, Client } from "colyseus";
-import { MAPS, ROOM_NAME, isRoomJoinOptions } from "@korony/shared";
+import { ROOM_NAME, isKnownMapId, isRoomJoinOptions } from "@korony/shared";
 import type { RoomJoinOptions } from "@korony/shared";
 import type { SessionAuth } from "../auth";
 import { loadoutFor } from "../shop";
@@ -30,7 +30,7 @@ const FINISHED_ROOM_TTL_MS = 10 * 60 * 1000;
  */
 export async function authorizeJoin(deps: Pick<MatchRoomDeps, "auth" | "store">, options: unknown): Promise<JoinUser> {
   if (!isRoomJoinOptions(options)) throw new ServerError(ErrorCode.AUTH_FAILED, "Неверные параметры входа в комнату");
-  if (options.mapId !== undefined && !Object.hasOwn(MAPS, options.mapId)) {
+  if (options.mapId !== undefined && !isKnownMapId(options.mapId)) {
     throw new ServerError(ErrorCode.MATCHMAKE_INVALID_CRITERIA, "Неизвестная карта");
   }
   const session = await deps.auth.verify(options.token);

@@ -33,6 +33,8 @@ describe("matchFilter", () => {
     expect(matchFilter({ code: "x".repeat(17) })).toEqual({ code: "", mapId: "valley" });
     expect(matchFilter({ mapId: "atlantis" })).toEqual({ code: "", mapId: "valley" });
     expect(matchFilter({ mapId: "toString" }).mapId).toBe("valley");
+    expect(matchFilter({ mapId: "random-m" }).mapId).toBe("random-m");
+    expect(matchFilter({ mapId: "random-xl" }).mapId).toBe("valley");
     expect(matchFilter(null)).toEqual({ code: "", mapId: "valley" });
   });
 });

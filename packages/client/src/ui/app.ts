@@ -30,7 +30,7 @@ import { questsPanel } from "./panels/quests";
 import { shopPanel } from "./panels/shop";
 import { spellbookPanel } from "./panels/spellbook";
 import type { AppApi, PanelFactory } from "./panels/types";
-import { lobbyScreen, loginScreen, waitingScreen } from "./screens";
+import { chosenAiMap, lobbyScreen, loginScreen, waitingScreen } from "./screens";
 import type { ScreenApi } from "./screens";
 import { resetWorldScreen, worldScreen } from "./world";
 
@@ -318,7 +318,8 @@ export class App implements AppApi, ScreenApi, UiHooks {
       const user = this.currentUser;
       let loadout = user ? loadoutFromOwned(user.owned, user.banner) : undefined;
       if (user && getToken()) loadout = await withTimeout(api.loadout(user), 1500).catch(() => loadout);
-      game = LocalGame.create(user ? { name: user.username, ...(loadout ? { loadout } : {}) } : {});
+      const mapId = chosenAiMap();
+      game = LocalGame.create(user ? { name: user.username, mapId, ...(loadout ? { loadout } : {}) } : { mapId });
     }
     this.attach(game);
   }

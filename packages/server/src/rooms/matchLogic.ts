@@ -1,5 +1,5 @@
 import {
-  LOG_LIMIT, MAPS, ROOM_CODE_MAX, applyAction, createGame, eventsForPlayer, forceEndDay, isClientMessage, playerView,
+  LOG_LIMIT, ROOM_CODE_MAX, applyAction, createGame, isKnownMapId, eventsForPlayer, forceEndDay, isClientMessage, playerView,
 } from "@korony/shared";
 import type { GameEvent, GameState, PlayerId, PlayerLoadout, PlayerSetup, Seat, ServerMessage } from "@korony/shared";
 
@@ -64,7 +64,7 @@ export function matchFilter(options: unknown): { code: string; mapId: string } {
   const rawCode = o["code"];
   const code = typeof rawCode === "string" && rawCode.length <= ROOM_CODE_MAX ? rawCode.trim().toUpperCase() : "";
   const rawMap = o["mapId"];
-  const mapId = typeof rawMap === "string" && Object.hasOwn(MAPS, rawMap) ? rawMap : DEFAULT_MAP_ID;
+  const mapId = typeof rawMap === "string" && isKnownMapId(rawMap) ? rawMap : DEFAULT_MAP_ID;
   return { code, mapId };
 }
 
@@ -90,7 +90,7 @@ export class MatchLogic {
   private readonly buckets = new Map<string, { tokens: number; at: number }>();
 
   constructor(private readonly opts: MatchLogicOptions) {
-    if (!Object.hasOwn(MAPS, opts.mapId)) throw new Error(`unknown map ${opts.mapId}`);
+    if (!isKnownMapId(opts.mapId)) throw new Error(`unknown map ${opts.mapId}`);
   }
 
   get started(): boolean {

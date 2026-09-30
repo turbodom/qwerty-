@@ -160,9 +160,18 @@ export function revealAll(state: GameState): void {
 
 // ================= economy =================
 
-/** Daily income: castle 1000 + 500 per owned mine (as in the prototype). */
+/** Castles the player owns. */
+export function ownedCastles(state: GameState, playerId: PlayerId): MapObject[] {
+  return state.objects.filter((o) => o.kind === "castle" && !o.gone && o.owner === playerId);
+}
+
+/** Daily income: 1000 per owned castle + 500 per owned mine. */
 export function income(state: GameState, playerId: PlayerId): number {
-  let g = CASTLE_INCOME;
-  for (const o of state.objects) if (o.kind === "mine" && !o.gone && o.owner === playerId) g += MINE_INCOME;
+  let g = 0;
+  for (const o of state.objects) {
+    if (o.gone || o.owner !== playerId) continue;
+    if (o.kind === "castle") g += CASTLE_INCOME;
+    else if (o.kind === "mine") g += MINE_INCOME;
+  }
   return g;
 }

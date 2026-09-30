@@ -22,8 +22,12 @@ export const PI_LOGIN: boolean = readString("VITE_PI_LOGIN") === "true";
 /** True in the Vite dev server. */
 export const IS_DEV: boolean = env["DEV"] === true;
 
-/** Map used for new games. */
-export const DEFAULT_MAP_ID = "valley";
+/** Map used for new games: a fresh medium-sized random map every match. */
+export const DEFAULT_MAP_ID = "random-m";
+
+/** Maps offered for games against the AI (procedural sizes and the hand-made valley). */
+export const AI_MAP_CHOICES = ["random-s", "random-m", "random-l", "valley"] as const;
+export type AiMapChoice = (typeof AI_MAP_CHOICES)[number];
 
 /**
  * Colyseus endpoint. With an explicit server URL the client talks to it directly; with same origin

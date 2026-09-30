@@ -12,6 +12,7 @@ export * from "./data/shop";
 export * from "./data/growth";
 export * from "./data/rules";
 export * from "./maps";
+export * from "./mapgen";
 export * from "./hero";
 export * from "./map";
 export * from "./view";

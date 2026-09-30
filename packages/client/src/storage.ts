@@ -18,6 +18,8 @@ export const STORAGE_KEYS = {
   reconnect: "korony-reconnect",
   /** Last name used for the guest login (prefills the field). */
   guestName: "korony-guest-name",
+  /** Map chosen for new games against the AI ("random-m", "valley", ...). */
+  aiMap: "korony-ai-map",
 } as const;
 
 /** In-memory storage (used as a fallback and in tests). */
