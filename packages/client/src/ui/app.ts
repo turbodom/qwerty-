@@ -5,7 +5,7 @@ import { ApiError, api, getToken, loadoutFromOwned, setToken } from "../api";
 import type { User } from "../api";
 import { sfx, unlockAudio } from "../audio";
 import { IS_DEV } from "../config";
-import { artUrl } from "../gfx/artUrls";
+import { artUrl, unitPicUrl } from "../gfx/artUrls";
 import { bridge } from "../game/bridge";
 import type { BattleBarState, UiHooks } from "../game/bridge";
 import { Director } from "../game/director";
@@ -604,6 +604,18 @@ export class App implements AppApi, ScreenApi, UiHooks {
     if (bb) {
       const battle = (): BattleScene | null => this.director.battleScene;
       this.bar.append(
+        h(
+          "div",
+          { class: "turn-queue", testid: "turn-queue" },
+          ...bb.queue.map((q, i) =>
+            h(
+              "div",
+              { class: `tq ${q.mine ? "mine" : "foe"}${i === 0 ? " now" : ""}` },
+              h("img", { src: unitPicUrl(q.unit), alt: "" }),
+              h("span", null, fmtNum(q.count)),
+            ),
+          ),
+        ),
         h(
           "div",
           { class: "actions battle" },

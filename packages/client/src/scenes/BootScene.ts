@@ -11,7 +11,7 @@ import {
 } from "../gfx/bake";
 import type { Baked } from "../gfx/bake";
 import {
-  BANNER_KEYS, BATTLE_H, BATTLE_K, BATTLE_W, COLOR_KEYS, HEX_R, MAP_K, ORIGINS, PLAIN_VARIANTS, TEX, TILE, artKey, castleKey, heroKey,
+  BANNER_KEYS, BATTLE_FIELDS, BATTLE_H, BATTLE_K, BATTLE_W, COLOR_KEYS, HEX_R, MAP_K, ORIGINS, PLAIN_VARIANTS, TEX, TILE, artKey, castleKey, heroKey,
   mapKey, mineKey, terrainKey, unitKey,
 } from "../gfx/keys";
 import { BANNER_COLORS } from "../gfx/draw";
@@ -124,8 +124,10 @@ export class BootScene extends Phaser.Scene {
     this.add1(TEX.smoke, bakeSmoke(32));
     this.add1(TEX.muzzle, bakeMuzzle(24));
     this.add1(TEX.spark, bakeSmoke(6));
-    const field = this.pic("battle-bg");
-    this.add1(TEX.battleBg, field ? paintBattleBg(field, BATTLE_W, BATTLE_H) : bakeBattleBg(BATTLE_W, BATTLE_H));
+    for (const name of BATTLE_FIELDS) {
+      const field = this.pic(name);
+      this.add1(name, field ? paintBattleBg(field, BATTLE_W, BATTLE_H) : bakeBattleBg(BATTLE_W, BATTLE_H));
+    }
 
     this.scene.start("MapScene");
     bridge.bootDone();

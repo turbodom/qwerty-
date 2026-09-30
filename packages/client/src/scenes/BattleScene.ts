@@ -14,6 +14,7 @@ import type { ColorKey } from "../gfx/keys";
 import {
   BATTLE_H, BATTLE_K, BATTLE_MARGIN, BATTLE_W, HEX_R, HEX_W, TEX, originOf, unitKey,
 } from "../gfx/keys";
+import type { BattleField } from "../gfx/keys";
 import { t } from "../i18n";
 import { unitName } from "../i18n/catalog";
 
@@ -24,6 +25,13 @@ const OX = BATTLE_MARGIN + HEX_W / 2;
 const OY = BATTLE_MARGIN + HEX_R;
 const COLS = 8;
 const ROWS = 11;
+
+/** Hero duels burn in the ruined city, sieges hit a fortified outpost, undead lurk in the toxic zone, beasts in the forest. */
+function battleField(ab: ActiveBattle): BattleField {
+  if (ab.context.kind === "hero") return "battle-bg";
+  if (ab.context.kind === "garrison") return "battle-bg-fort";
+  return ab.battle.stacks.some((s) => UNITS[s.unit].faction === "necropolis") ? "battle-bg-toxic" : "battle-bg-forest";
+}
 
 const BADGE: Record<ColorKey, number> = { blue: 0x1d3050, red: 0x4d1a15, grey: 0x3a3631 };
 
@@ -133,7 +141,8 @@ export class BattleScene extends Phaser.Scene {
     this.acting = this.model.active;
 
     this.cameras.main.setBackgroundColor("#2c3a22");
-    this.add.image(0, 0, TEX.battleBg).setOrigin(0, 0).setDisplaySize(BATTLE_W, BATTLE_H).setDepth(0);
+    const field = battleField(ab);
+    this.add.image(0, 0, this.textures.exists(field) ? field : TEX.battleBg).setOrigin(0, 0).setDisplaySize(BATTLE_W, BATTLE_H).setDepth(0);
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
         const [x, y] = this.hexCenter(c, r);
@@ -467,6 +476,11 @@ export class BattleScene extends Phaser.Scene {
       myTurn: this.myTurn(),
       canCast: !!hero && hero.spells.length > 0 && !this.model.spellUsed[this.side],
       spellMode: this.spellMode !== null,
+      queue: [this.model.active, ...this.model.queue]
+        .map((id) => (id === null ? undefined : this.model?.stacks.find((st) => st.id === id && st.count > 0)))
+        .filter((st): st is BattleStack => !!st)
+        .slice(0, 7)
+        .map((st) => ({ unit: st.unit, count: st.count, mine: st.side === this.side })),
     });
   }
 

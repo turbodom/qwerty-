@@ -2,7 +2,7 @@
  * Glue between the Phaser scenes and the DOM UI: the current game session and the UI callbacks the
  * scenes may use (hint line, toasts, panels, battle action bar). Set by the App at startup.
  */
-import type { ActiveBattle, GameAction, Seat, SpellId } from "@korony/shared";
+import type { ActiveBattle, GameAction, Seat, SpellId, UnitId } from "@korony/shared";
 import type { ActionResultLike, GameConnection } from "../net/connection";
 
 export interface BattleBarState {
@@ -13,6 +13,8 @@ export interface BattleBarState {
   canCast: boolean;
   /** Spell targeting is active. */
   spellMode: boolean;
+  /** Turn order for the rest of the round: the active stack first. */
+  queue: { unit: UnitId; count: number; mine: boolean }[];
 }
 
 export interface UiHooks {

@@ -45,6 +45,10 @@ export const TEX = {
   tileMark: "tile-mark",
 } as const;
 
+/** Battlefield textures: the burning city (hero duels) plus biome fields picked per battle in BattleScene. */
+export const BATTLE_FIELDS = ["battle-bg", "battle-bg-toxic", "battle-bg-forest", "battle-bg-fort"] as const;
+export type BattleField = (typeof BATTLE_FIELDS)[number];
+
 /** Number of plain-tile decoration variants (0 = no grass speck). */
 export const PLAIN_VARIANTS = 4;
 

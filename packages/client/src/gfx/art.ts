@@ -15,7 +15,8 @@ export type Pic = CanvasImageSource & { width: number; height: number };
 
 /** File names (without extension) that BootScene loads into Phaser. */
 export const SCENE_ART: readonly string[] = [
-  "base-player", "base-enemy", "hero-player", "hero-enemy", "mine", "chest", "battle-bg", "rock1", "rock2",
+  "base-player", "base-enemy", "hero-player", "hero-enemy", "mine", "chest", "battle-bg", "battle-bg-toxic", "battle-bg-forest", "battle-bg-fort",
+  "rock1", "rock2",
 ];
 
 /** Draws `pic` scaled to fit maxW x maxH, centred on cx with its bottom edge at `bottom`. */
