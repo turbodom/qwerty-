@@ -5,7 +5,7 @@ import { ApiError, api, getToken, loadoutFromOwned, setToken } from "../api";
 import type { User } from "../api";
 import { sfx, unlockAudio } from "../audio";
 import { IS_DEV } from "../config";
-import { artUrl } from "../gfx/artUrls";
+import { artUrl, unitPicUrl } from "../gfx/artUrls";
 import { bridge } from "../game/bridge";
 import type { BattleBarState, UiHooks } from "../game/bridge";
 import { Director } from "../game/director";
@@ -112,11 +112,26 @@ export class App implements AppApi, ScreenApi, UiHooks {
     const ro = new ResizeObserver(() => this.resizeGame());
     ro.observe(this.gameParent);
     document.addEventListener("pointerdown", () => unlockAudio(), { once: true, capture: true });
+    this.fillAsh();
     this.overlay.addEventListener("click", (e) => {
       if (e.target === this.overlay && this.panelClosable()) this.closePanel();
     });
     onLangChange(() => this.renderAll());
     if (IS_DEV) this.exposeTestHooks();
+  }
+
+  /** Falling ash over the game canvas (a fixed dozen CSS particles, see .game-fx). */
+  private fillAsh(): void {
+    const fx = document.getElementById("game-fx");
+    if (!fx) return;
+    for (let i = 0; i < 16; i++) {
+      const e = h("i");
+      e.style.setProperty("--x", `${(i * 41 + 7) % 110}%`);
+      e.style.setProperty("--d", `${9 + ((i * 5) % 9)}s`);
+      e.style.setProperty("--delay", `${-((i * 1.7) % 12)}s`);
+      e.style.setProperty("--s", `${2 + (i % 3)}px`);
+      fx.append(e);
+    }
   }
 
   // ================= startup =================
@@ -473,7 +488,7 @@ export class App implements AppApi, ScreenApi, UiHooks {
     this.currentView = view;
     const fb = feedbackFromEvents(events, view.you, view.state);
     for (const s of fb.sounds) sfx(s);
-    for (const text of fb.toasts) this.toast(text);
+    fb.toasts.forEach((text, i) => this.toast(text, fb.rewards[i] ? "reward" : "info"));
     const me = mePlayer(view);
     const inBattle = !!myBattle(view);
 
@@ -495,7 +510,7 @@ export class App implements AppApi, ScreenApi, UiHooks {
       const won = view.state.winner === view.you;
       sfx(won ? "win" : "lose");
       if (this.conn?.kind === "local") LocalGame.clearSave();
-      this.openPanel(resultPanel(won, view.state.day));
+      this.openPanel(resultPanel(won));
       return;
     }
 
@@ -589,6 +604,18 @@ export class App implements AppApi, ScreenApi, UiHooks {
     if (bb) {
       const battle = (): BattleScene | null => this.director.battleScene;
       this.bar.append(
+        h(
+          "div",
+          { class: "turn-queue", testid: "turn-queue" },
+          ...bb.queue.map((q, i) =>
+            h(
+              "div",
+              { class: `tq ${q.mine ? "mine" : "foe"}${i === 0 ? " now" : ""}` },
+              h("img", { src: unitPicUrl(q.unit), alt: "" }),
+              h("span", null, fmtNum(q.count)),
+            ),
+          ),
+        ),
         h(
           "div",
           { class: "actions battle" },
@@ -725,7 +752,7 @@ export class App implements AppApi, ScreenApi, UiHooks {
     const body = h("div", { class: "panel-body" }, spec.body);
     const panel = h(
       "section",
-      { class: `panel${spec.center ? " center" : ""}`, role: "dialog", testid: `panel-${spec.id}` },
+      { class: `panel${spec.center ? " center" : ""}${spec.className ? ` ${spec.className}` : ""}`, role: "dialog", testid: `panel-${spec.id}` },
       h(
         "div",
         { class: "panel-head" },
@@ -746,8 +773,14 @@ export class App implements AppApi, ScreenApi, UiHooks {
     this.hintEl.textContent = text;
   }
 
-  toast(text: string, kind: "info" | "error" = "info"): void {
-    const el = h("div", { class: `toast ${kind}`, role: kind === "error" ? "alert" : "status" }, engineText(text));
+  toast(text: string, kind: "info" | "error" | "reward" = "info"): void {
+    if (kind === "error") sfx("error");
+    const el = h(
+      "div",
+      { class: `toast ${kind}`, role: kind === "error" ? "alert" : "status" },
+      h("span", { class: "toast-ico" }, kind === "error" ? "!" : kind === "reward" ? "★" : "i"),
+      h("span", null, engineText(text)),
+    );
     this.toasts.append(el);
     while (this.toasts.children.length > 3) this.toasts.firstElementChild?.remove();
     setTimeout(() => el.classList.add("hide"), 2600);

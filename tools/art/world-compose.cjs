@@ -1,6 +1,8 @@
 // Composes public/art/world-map.webp (the Seasonal Wasteland map) from the painted art already in public/art:
 // the valley landscape as ground, toxic glow on contamination zones and the mine, fort and fortress sprites on
-// their sectors (layout = WORLD_LAYOUT in shared/src/world.ts). A fully painted map from edit.py can replace it.
+// their sectors (layout = WORLD_LAYOUT in shared/src/world.ts). The shipped map is painted instead: node world-layout.cjs,
+// then python3 edit.py world-layout.png raw/world-map.jpg grok-imagine-image-2.0 prompts/world-map.txt and convert to webp.
+// This script remains as the offline fallback.
 const { chromium } = require(process.env.PW || "playwright");
 const fs = require("fs"), path = require("path");
 const ART = path.join(__dirname, "../../packages/client/public/art");

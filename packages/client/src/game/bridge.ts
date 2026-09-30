@@ -2,7 +2,7 @@
  * Glue between the Phaser scenes and the DOM UI: the current game session and the UI callbacks the
  * scenes may use (hint line, toasts, panels, battle action bar). Set by the App at startup.
  */
-import type { ActiveBattle, GameAction, Seat, SpellId } from "@korony/shared";
+import type { ActiveBattle, GameAction, Seat, SpellId, UnitId } from "@korony/shared";
 import type { ActionResultLike, GameConnection } from "../net/connection";
 
 export interface BattleBarState {
@@ -13,11 +13,13 @@ export interface BattleBarState {
   canCast: boolean;
   /** Spell targeting is active. */
   spellMode: boolean;
+  /** Turn order for the rest of the round: the active stack first. */
+  queue: { unit: UnitId; count: number; mine: boolean }[];
 }
 
 export interface UiHooks {
   hint(text: string): void;
-  toast(text: string, kind?: "info" | "error"): void;
+  toast(text: string, kind?: "info" | "error" | "reward"): void;
   openHero(): void;
   openCastle(): void;
   openSpellbook(ab: ActiveBattle, side: Seat, onPick: (spell: SpellId) => void): void;
@@ -48,7 +50,7 @@ class Bridge {
     this.ui?.hint(text);
   }
 
-  toast(text: string, kind: "info" | "error" = "info"): void {
+  toast(text: string, kind: "info" | "error" | "reward" = "info"): void {
     this.ui?.toast(text, kind);
   }
 

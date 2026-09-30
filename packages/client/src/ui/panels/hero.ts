@@ -1,6 +1,6 @@
-import { ARTIFACTS, SETS, SLOTS, effectiveStat, expToNext, heroSpells, maxMovement, setCounts } from "@korony/shared";
-import type { ArmyStack, GameState, SetId, SlotId } from "@korony/shared";
-import { gearTier, heroBodyUrl } from "../../gfx/artUrls";
+import { ARTIFACTS, SETS, SLOTS, armyPower, effectiveStat, expToNext, heroSpells, maxMovement, setCounts } from "@korony/shared";
+import type { ArmyStack, ArtifactId, GameState, SetId, SkillId, SlotId, StatKey } from "@korony/shared";
+import { gearTier, heroBodyUrl, skillIconUrl, spellIconUrl } from "../../gfx/artUrls";
 import { artIconUrl, unitIconUrl } from "../../gfx/bake";
 import { mePlayer, myHero, ownerColor } from "../../game/helpers";
 import { fmtNum, t } from "../../i18n";
@@ -31,6 +31,9 @@ export function armyChips(state: GameState, owner: string, army: readonly ArmySt
     });
 }
 
+/** The backpack item whose details are shown. */
+let selectedBag: number | null = null;
+
 export function heroPanel(app: AppApi): PanelSpec {
   const view = app.view();
   const hero = view ? myHero(view) : undefined;
@@ -44,21 +47,21 @@ export function heroPanel(app: AppApi): PanelSpec {
   }
 
   const need = expToNext(hero.level);
-  const st = (k: Parameters<typeof effectiveStat>[1]): number => effectiveStat(hero, k);
+  const st = (k: StatKey): number => effectiveStat(hero, k);
   body.append(
-    h("div", { class: "fx" }, t("hero.exp", { exp: fmtNum(hero.exp), next: fmtNum(need) })),
-    h("div", { class: "progress" }, h("i", { style: `width:${Math.min(100, Math.round((hero.exp / need) * 100))}%` })),
     h(
       "div",
-      { class: "fx" },
-      t("hero.stats", {
-        atk: st("atk"), def: st("def"), pow: st("pow"), luck: st("luck"), morale: st("morale"), spd: st("spd"),
-        move: maxMovement(hero),
-      }),
+      { class: "hero-head" },
+      h("div", { class: "hero-lvl" }, h("small", null, t("hero.level")), h("b", null, hero.level)),
+      h(
+        "div",
+        { class: "grow" },
+        h("div", { class: "hero-xp" }, h("span", null, t("hero.expShort")), h("span", null, `${fmtNum(hero.exp)} / ${fmtNum(need)}`)),
+        h("div", { class: "progress" }, h("i", { style: `width:${Math.min(100, Math.round((hero.exp / need) * 100))}%` })),
+      ),
+      h("div", { class: "hero-power" }, h("small", null, t("hero.power")), h("b", { testid: "hero-power" }, fmtNum(armyPower(hero.army)))),
     ),
-    h("div", { class: "fx" }, t("hero.mp", { mp: hero.mp, max: maxMovement(hero) })),
   );
-
   if (me.levelChoices.length > 0) {
     body.append(
       h("button", { class: "btn block", testid: "choose-skill", onClick: () => app.openPanel(levelUpPanel) }, t("hero.chooseSkill")),
@@ -67,8 +70,6 @@ export function heroPanel(app: AppApi): PanelSpec {
 
   body.append(h("div", { class: "section-title" }, t("hero.army")), h("div", { class: "inline" }, armyChips(view.state, view.you, hero.army)));
 
-  const spells = heroSpells(view.state, hero).map((id) => spellName(id));
-  body.append(h("div", { class: "fx" }, t("hero.spells", { list: spells.join(", ") })));
 
   // equipment: the hero figure between the 10 slots; the figure gets heavier gear as more slots fill
   const color = ownerColor(view.state, view.you);
@@ -115,6 +116,38 @@ export function heroPanel(app: AppApi): PanelSpec {
     h("p", { class: "fx" }, t("hero.unequipHint")),
   );
 
+  // characteristics as a list with icons, then the spells as an ability bar
+  const rows: [SkillId, I18nKey, string][] = [
+    ["offense", "hero.stat.atk", String(st("atk"))],
+    ["armor", "hero.stat.def", String(st("def"))],
+    ["sorcery", "hero.stat.pow", String(st("pow"))],
+    ["luck", "hero.stat.luck", String(st("luck"))],
+    ["leadership", "hero.stat.morale", String(st("morale"))],
+    ["pathfinding", "hero.stat.move", `${hero.mp} / ${maxMovement(hero)}`],
+  ];
+  body.append(
+    h("div", { class: "section-title" }, t("hero.statsTitle")),
+    h(
+      "div",
+      { class: "hero-stats", testid: "hero-stats" },
+      rows.map(([icon, key, value]) =>
+        h("div", { class: "hero-stat" }, h("img", { src: skillIconUrl(icon), alt: "" }), h("span", null, t(key)), h("b", null, value)),
+      ),
+      st("spd") > 0 ? h("div", { class: "hero-stat" }, h("span", { class: "hero-stat-ico" }, "»"), h("span", null, t("hero.stat.spd")), h("b", null, `+${st("spd")}`)) : null,
+    ),
+  );
+  const spells = heroSpells(view.state, hero);
+  if (spells.length > 0) {
+    body.append(
+      h("div", { class: "section-title" }, t("hero.abilities")),
+      h(
+        "div",
+        { class: "hero-abilities" },
+        spells.map((id) => h("div", { class: "hero-ability", title: spellName(id) }, h("img", { src: spellIconUrl(id), alt: "" }), h("span", null, spellName(id)))),
+      ),
+    );
+  }
+
   // sets
   const counts = setCounts(hero);
   for (const k of Object.keys(SETS) as SetId[]) {
@@ -129,25 +162,52 @@ export function heroPanel(app: AppApi): PanelSpec {
     );
   }
 
-  // backpack
+  // backpack: an inventory grid; tapping an item shows its details with the equip button
   body.append(h("div", { class: "section-title" }, t("hero.bag")));
   if (hero.bag.length === 0) body.append(h("p", { class: "fx" }, t("hero.bagEmpty")));
-  hero.bag.forEach((id, i) => {
-    const a = ARTIFACTS[id];
+  const sel = selectedBag !== null && hero.bag[selectedBag] ? selectedBag : hero.bag.length > 0 ? 0 : null;
+  const cells: HTMLElement[] = hero.bag.map((id, i) =>
+    h(
+      "button",
+      {
+        type: "button",
+        class: `inv-cell r${ARTIFACTS[id].rarity}${i === sel ? " sel" : ""}`,
+        testid: `bag-${i}`,
+        title: artifactName(id),
+        ariaLabel: artifactName(id),
+        onClick: () => {
+          selectedBag = i;
+          app.rerender();
+        },
+      },
+      h("img", { src: artIconUrl(id), alt: "" }),
+    ),
+  );
+  const minCells = Math.max(10, Math.ceil(hero.bag.length / 5) * 5);
+  for (let i = hero.bag.length; i < minCells; i++) cells.push(h("div", { class: "inv-cell empty" }));
+  body.append(h("div", { class: "inv-grid" }, cells));
+  const selId: ArtifactId | undefined = sel !== null ? hero.bag[sel] : undefined;
+  if (selId) {
+    const a = ARTIFACTS[selId];
     body.append(
       h(
         "div",
-        { class: "item-row", testid: `bag-${i}` },
-        h("img", { src: artIconUrl(id), alt: "" }),
+        { class: `inv-detail r${a.rarity}`, testid: "bag-detail" },
+        h("img", { src: artIconUrl(selId), alt: "" }),
         h(
           "div",
           { class: "grow" },
-          h("b", { class: `r${a.rarity}` }, artifactName(id)),
-          h("div", { class: "fx" }, `${t(`rarity.${a.rarity}` as I18nKey)} · ${artifactFx(a)}`),
+          h("b", { class: `r${a.rarity}` }, artifactName(selId)),
+          h("div", { class: "fx" }, `${t(`rarity.${a.rarity}` as I18nKey)} · ${slotName(a.slot === "ring" ? "ring1" : a.slot)}`),
+          h("div", null, artifactFx(a)),
         ),
-        h("button", { class: "btn ghost small", onClick: () => void app.act({ type: "equip", artifact: id }) }, t("hero.equip")),
+        h(
+          "button",
+          { class: "btn small", testid: "bag-equip", onClick: () => { selectedBag = null; void app.act({ type: "equip", artifact: selId }); } },
+          t("hero.equip"),
+        ),
       ),
     );
-  });
+  }
   return { id: "hero", title, body };
 }

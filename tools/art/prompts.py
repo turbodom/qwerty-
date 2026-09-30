@@ -35,7 +35,12 @@ U = {
 }
 for k, v in U.items(): a("unit-" + k, "Photorealistic character sprite: " + v + ".", "unit")
 # battle
-a("battle-bg", "Tactical battlefield seen from above at a steep angle: a cracked asphalt street in a ruined city with rubble, puddles, faded road markings, burned debris only at the edges, the center completely open and flat, no people, no vehicles in the middle.", "bg", "3:4")
+a("battle-bg", "Straight top-down overhead drone view, looking directly down, no horizon, no sky: a ruined city square after heavy fighting at sunset. Around the edges of the frame: roofs of collapsed concrete buildings, a burned-out rusty bus seen from above, a wrecked tank seen from above, sandbag barricades, concrete blocks, burning cars with bright orange flames and drifting black smoke, rubble piles. The large centre area is open flat cracked dark asphalt with puddles reflecting orange fire light, a faded zebra crossing and small debris, clear for combat. No people. Warm fire glow against cool blue shadows, cinematic, ultra detailed, sharp.", "bg", "3:4")
+TOP = "Straight top-down overhead drone view, looking directly down, no horizon, no sky: "
+OPEN = " The large centre area is open flat ground clear for combat. No people. Cinematic, ultra detailed, sharp."
+a("battle-bg-toxic", TOP + "a contaminated wasteland at dusk. Around the edges of the frame: glowing acid-green toxic pools and swamp water, rusted leaking chemical barrels, dead black trees, bones, a crashed rusty helicopter seen from above, mutant nests of twisted scrap and roots, drifting green mist. The centre is cracked grey-brown mud with small puddles reflecting green glow." + OPEN + " Sickly green glow against cold violet shadows.", "bg", "3:4")
+a("battle-bg-forest", TOP + "a clearing in a dead burned pine forest at sunset. Around the edges of the frame: tops of dark pines and orange autumn trees, fallen logs, a rusted abandoned truck seen from above, a small stream, boulders, a ruined wooden watchtower, campfire smoke. The centre is dry grass, dirt paths and fallen needles." + OPEN + " Warm golden sunset light with long shadows, cool blue shade under the trees.", "bg", "3:4")
+a("battle-bg-fort", TOP + "the approach to a fortified survivor outpost at dusk. Along the top edge of the frame: a thick wall of welded steel plates and shipping containers with a watchtower and floodlights. Around the other edges: sandbag bunkers, anti-tank hedgehogs, barbed wire, a burned armored vehicle seen from above, crates and fuel drums, scorch marks. The centre is packed gravel and cracked concrete road with tyre tracks." + OPEN + " Warm floodlight and fire glow against cool blue dusk shadows.", "bg", "3:4")
 a("rock1", "A cover obstacle: a burned-out rusty car wreck.")
 a("rock2", "A cover obstacle: a pile of concrete road barriers and sandbags.")
 # heroes (screen)
@@ -79,9 +84,9 @@ for n in names:
     elif n == "app-icon": s = {"kind": "bg", "w": 512, "h": 512}
     elif n == "panel-tex": s = {"kind": "tex", "w": 256, "h": 256}
     elif n == "map-valley": s = {"kind": "bg", "w": 896, "h": 1024, "q": 0.86}
-    elif n == "battle-bg": s = {"kind": "bg", "w": 800, "h": 920}
+    elif n.startswith("battle-bg"): s = {"kind": "bg", "w": 800, "h": 920}
     elif n.startswith("hero-body-"): s = {"kind": "bg", "w": 540, "h": 720}
-    elif n.startswith("city-"): s = {"kind": "bg", "w": 960, "h": 540, "q": 0.8}
+    elif n.startswith("city-"): s = {"kind": "bg", "w": 1280, "h": 720, "q": 0.8}
     elif n.startswith("portrait-"): s = {"kind": "bg", "w": 256, "h": 256}
     elif n == "logo": s = {"kind": "sprite", "size": 640}
     elif n.startswith("rock"): s = {"kind": "sprite", "size": 192}

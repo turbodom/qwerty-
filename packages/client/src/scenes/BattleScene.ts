@@ -14,6 +14,7 @@ import type { ColorKey } from "../gfx/keys";
 import {
   BATTLE_H, BATTLE_K, BATTLE_MARGIN, BATTLE_W, HEX_R, HEX_W, TEX, originOf, unitKey,
 } from "../gfx/keys";
+import type { BattleField } from "../gfx/keys";
 import { t } from "../i18n";
 import { unitName } from "../i18n/catalog";
 
@@ -24,6 +25,13 @@ const OX = BATTLE_MARGIN + HEX_W / 2;
 const OY = BATTLE_MARGIN + HEX_R;
 const COLS = 8;
 const ROWS = 11;
+
+/** Hero duels burn in the ruined city, sieges hit a fortified outpost, undead lurk in the toxic zone, beasts in the forest. */
+function battleField(ab: ActiveBattle): BattleField {
+  if (ab.context.kind === "hero") return "battle-bg";
+  if (ab.context.kind === "garrison") return "battle-bg-fort";
+  return ab.battle.stacks.some((s) => UNITS[s.unit].faction === "necropolis") ? "battle-bg-toxic" : "battle-bg-forest";
+}
 
 const BADGE: Record<ColorKey, number> = { blue: 0x1d3050, red: 0x4d1a15, grey: 0x3a3631 };
 
@@ -133,7 +141,8 @@ export class BattleScene extends Phaser.Scene {
     this.acting = this.model.active;
 
     this.cameras.main.setBackgroundColor("#2c3a22");
-    this.add.image(0, 0, TEX.battleBg).setOrigin(0, 0).setDisplaySize(BATTLE_W, BATTLE_H).setDepth(0);
+    const field = battleField(ab);
+    this.add.image(0, 0, this.textures.exists(field) ? field : TEX.battleBg).setOrigin(0, 0).setDisplaySize(BATTLE_W, BATTLE_H).setDepth(0);
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
         const [x, y] = this.hexCenter(c, r);
@@ -147,6 +156,7 @@ export class BattleScene extends Phaser.Scene {
       this.add.image(x, y, key).setOrigin(org.x, org.y).setDepth(5 + this.displayRow(o[1]));
     }
     this.ambientSmoke();
+    this.ambientEmbers();
     this.activeMark = this.add.image(0, 0, TEX.hexActive).setDepth(3).setVisible(false);
     this.selMark = this.add.image(0, 0, TEX.hexSelect).setDepth(4).setVisible(false);
     for (const s of this.model.stacks) if (s.count > 0) this.stacks.set(s.id, this.makeStack(s));
@@ -225,7 +235,16 @@ export class BattleScene extends Phaser.Scene {
     this.activeMark.setVisible(false);
     bridge.ui?.setBattleBar(null);
     sfx(won ? "win" : "lose");
-    const band = this.add.rectangle(BATTLE_W / 2, BATTLE_H / 2, BATTLE_W, 150 * K, 0x000000, 0.62).setDepth(900);
+    const accent = won ? 0xd9a946 : 0xc24a3e;
+    const band = this.add.rectangle(BATTLE_W / 2, BATTLE_H / 2, BATTLE_W, 150 * K, 0x000000, 0.66).setDepth(900).setAlpha(0);
+    const lines = [-1, 1].map((d) =>
+      this.add.rectangle(BATTLE_W / 2, BATTLE_H / 2 + d * 75 * K, BATTLE_W, 3 * K, accent, 0.9).setDepth(900).setScale(0, 1),
+    );
+    const glow = this.add.image(BATTLE_W / 2, BATTLE_H / 2, TEX.smoke).setTint(accent).setBlendMode(Phaser.BlendModes.ADD).setDepth(900).setAlpha(0).setScale(9, 3);
+    this.tweens.add({ targets: band, alpha: 1, duration: 200 });
+    this.tweens.add({ targets: lines, scaleX: 1, duration: 360, ease: "Cubic.easeOut" });
+    this.tweens.add({ targets: glow, alpha: 0.35, duration: 500, yoyo: true, hold: 500 });
+    if (won) for (let i = 0; i < 3; i++) this.time.delayedCall(i * 160, () => this.sparks(BATTLE_W * (0.3 + i * 0.2), BATTLE_H / 2 - 30 * K, 0xf0d38a));
     const text = this.add
       .text(BATTLE_W / 2, BATTLE_H / 2, won ? t("battle.victory") : t("battle.defeat"), {
         fontFamily: "Oswald, Arial Narrow, sans-serif",
@@ -243,6 +262,8 @@ export class BattleScene extends Phaser.Scene {
     await this.wait(1400);
     band.destroy();
     text.destroy();
+    glow.destroy();
+    lines.forEach((l) => l.destroy());
   }
 
   // bottom-bar actions
@@ -455,6 +476,11 @@ export class BattleScene extends Phaser.Scene {
       myTurn: this.myTurn(),
       canCast: !!hero && hero.spells.length > 0 && !this.model.spellUsed[this.side],
       spellMode: this.spellMode !== null,
+      queue: [this.model.active, ...this.model.queue]
+        .map((id) => (id === null ? undefined : this.model?.stacks.find((st) => st.id === id && st.count > 0)))
+        .filter((st): st is BattleStack => !!st)
+        .slice(0, 7)
+        .map((st) => ({ unit: st.unit, count: st.count, mine: st.side === this.side })),
     });
   }
 
@@ -765,9 +791,35 @@ export class BattleScene extends Phaser.Scene {
     const [bx, by] = to;
     this.face(fromId, bx);
     this.face(toId, ax);
-    await this.tweenTo(v.container, { x: ax + (bx - ax) * 0.45, y: ay + (by - ay) * 0.45 }, 130 * this.speed);
+    // wind-up: a short step back before the charge
+    await this.tweenTo(v.container, { x: ax - (bx - ax) * 0.06, y: ay - (by - ay) * 0.06 }, 90 * this.speed);
+    await this.tweenTo(v.container, { x: ax + (bx - ax) * 0.45, y: ay + (by - ay) * 0.45 }, 120 * this.speed);
     this.impact(toId, ax, ay);
     await this.tweenTo(v.container, { x: ax, y: ay }, 150 * this.speed);
+  }
+
+  /** Embers rising from the burning ruins along the field edges; a fixed pool, recycled. */
+  private ambientEmbers(): void {
+    if (reducedMotion()) return;
+    const rise = (img: Img): void => {
+      const edge = Math.random() < 0.5;
+      img.setPosition(edge ? Math.random() * BATTLE_W * 0.22 : BATTLE_W * (0.78 + Math.random() * 0.22), BATTLE_H * (0.55 + Math.random() * 0.45));
+      img.setAlpha(0).setScale(0.35 + Math.random() * 0.4);
+      this.tweens.add({
+        targets: img,
+        y: img.y - BATTLE_H * (0.25 + Math.random() * 0.3),
+        x: img.x + (Math.random() - 0.5) * 80 * K,
+        alpha: { from: 0.9, to: 0 },
+        duration: 3200 + Math.random() * 2600,
+        delay: Math.random() * 2400,
+        ease: "Sine.easeOut",
+        onComplete: () => rise(img),
+      });
+    };
+    for (let i = 0; i < 14; i++) {
+      const img = this.add.image(0, 0, TEX.spark).setTint(0xffa040).setBlendMode(Phaser.BlendModes.ADD).setDepth(610);
+      rise(img);
+    }
   }
 
   /** Slow haze drifting across the field. */

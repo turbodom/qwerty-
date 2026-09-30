@@ -33,6 +33,8 @@ export interface PanelSpec {
   closable?: boolean;
   /** Stable id (for tests and re-renders). */
   id: string;
+  /** Extra class on the panel (special presentations such as the victory screen). */
+  className?: string;
 }
 
 export type PanelFactory = (app: AppApi) => PanelSpec;

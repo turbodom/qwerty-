@@ -311,18 +311,31 @@ export class MapScene extends Phaser.Scene {
         if (ex[y * cols + x] !== "1") g.fillRect(x * TILE, y * TILE, TILE, TILE);
       }
     }
-    // soft edge: a translucent band on explored tiles that touch the fog
-    g.fillStyle(FOG_COLOR, 0.28);
-    for (let y = 0; y < rows; y++) {
-      for (let x = 0; x < cols; x++) {
-        if (ex[y * cols + x] !== "1") continue;
-        const fogged = (xx: number, yy: number): boolean =>
-          xx >= 0 && yy >= 0 && xx < cols && yy < rows && ex[yy * cols + xx] !== "1";
-        const e = TILE * 0.18;
-        if (fogged(x, y - 1)) g.fillRect(x * TILE, y * TILE, TILE, e);
-        if (fogged(x, y + 1)) g.fillRect(x * TILE, (y + 1) * TILE - e, TILE, e);
-        if (fogged(x - 1, y)) g.fillRect(x * TILE, y * TILE, e, TILE);
-        if (fogged(x + 1, y)) g.fillRect((x + 1) * TILE - e, y * TILE, e, TILE);
+    // soft edge: graded translucent bands on explored tiles that touch the fog, so the border fades out
+    const bands: [number, number][] = [
+      [0.4, 0.1],
+      [0.26, 0.22],
+      [0.12, 0.38],
+    ];
+    const fogged = (xx: number, yy: number): boolean => xx >= 0 && yy >= 0 && xx < cols && yy < rows && ex[yy * cols + xx] !== "1";
+    for (const [alpha, depth] of bands) {
+      g.fillStyle(FOG_COLOR, alpha);
+      const e = TILE * depth;
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          if (ex[y * cols + x] !== "1") continue;
+          const x0 = x * TILE;
+          const y0 = y * TILE;
+          if (fogged(x, y - 1)) g.fillRect(x0, y0, TILE, e);
+          if (fogged(x, y + 1)) g.fillRect(x0, y0 + TILE - e, TILE, e);
+          if (fogged(x - 1, y)) g.fillRect(x0, y0, e, TILE);
+          if (fogged(x + 1, y)) g.fillRect(x0 + TILE - e, y0, e, TILE);
+          // diagonal-only neighbours get a corner patch so the fog has no notches
+          if (fogged(x - 1, y - 1) && !fogged(x - 1, y) && !fogged(x, y - 1)) g.fillRect(x0, y0, e, e);
+          if (fogged(x + 1, y - 1) && !fogged(x + 1, y) && !fogged(x, y - 1)) g.fillRect(x0 + TILE - e, y0, e, e);
+          if (fogged(x - 1, y + 1) && !fogged(x - 1, y) && !fogged(x, y + 1)) g.fillRect(x0, y0 + TILE - e, e, e);
+          if (fogged(x + 1, y + 1) && !fogged(x + 1, y) && !fogged(x, y + 1)) g.fillRect(x0 + TILE - e, y0 + TILE - e, e, e);
+        }
       }
     }
   }
