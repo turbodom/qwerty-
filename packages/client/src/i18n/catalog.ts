@@ -257,6 +257,7 @@ const EN_MESSAGES: Record<string, string> = {
   "Замок захвачен!": "Castle captured!",
   "Новая неделя! В замке новые войска.": "A new week! New troops in the castle.",
   "Рудник ваш: +500 золота в день": "The mine is yours: +500 gold a day",
+  "Гарнизон замка встаёт на защиту вместе с героем!": "The castle garrison joins the hero in defence!",
   // match server
   "Слишком много действий, подождите немного": "Too many actions, wait a moment",
   "Неверное сообщение": "Invalid message",
@@ -304,6 +305,10 @@ const EN_PATTERNS: readonly [RegExp, (m: RegExpMatchArray) => string | null][] =
   }],
   [/^\+([\d\s ]+) золота$/, (m) => `+${(m[1] ?? "").trim()} gold`],
   [/^(.+) захватывает замок!$/, (m) => `${m[1] ?? ""} captures a castle!`],
+  [/^(.+) разбит и вернётся в замок завтра с отрядом ополчения\.$/, (m) => `${m[1] ?? ""} is beaten and returns to the castle tomorrow with a militia.`],
+  [/^(.+) вернулся в замок и снова готов к походу\.$/, (m) => `${m[1] ?? ""} is back in the castle and ready to march.`],
+  [/^Без замка! Дней, чтобы отбить замок: (\d+)\.$/, (m) => `No castle! Days left to take one back: ${m[1] ?? ""}.`],
+  [/^Последний замок потерян! У вас (\d+) дней, чтобы захватить замок\.$/, (m) => `Your last castle is lost! You have ${m[1] ?? ""} days to capture one.`],
   [/^(.+) повержен! Артефакты достаются победителю\.$/, (m) => `${m[1] ?? ""} is defeated! The winner takes the artifacts.`],
   [/^(.+) артефакт: (.+) \((.*)\)$/, (m) => {
     const id = byRuName(ARTIFACTS, m[2] ?? "");

@@ -69,6 +69,8 @@ export interface PlayerState {
   levelChoices: SkillId[][];
   endedDay: boolean;
   defeated: boolean;
+  /** Day on which the player lost the last castle (cleared when a castle is taken back). */
+  homelessSince?: number;
   banner?: string;
 }
 

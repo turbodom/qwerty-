@@ -349,9 +349,10 @@ describe("map interactions", () => {
     expect([s.heroes["h0"]!.x, s.heroes["h0"]!.y]).toEqual([moved.path[1]!.x, moved.path[1]!.y]);
   });
 
-  it("captures an undefended enemy castle: the owner is defeated", () => {
+  it("captures an undefended enemy castle: an owner without castle and hero is defeated", () => {
     const s = newGame(5);
     s.objects.find((o) => o.id === player(s, "p1").castleId)!.garrison = [];
+    s.heroes["h1"]!.alive = false;
     teleport(s, "h0", 10, 1);
     const r = must(s, "p0", { type: "move", to: { x: 11, y: 1 } });
     expect(s.objects.find((o) => o.x === 11 && o.y === 1)!.owner).toBe("p0");
@@ -438,15 +439,25 @@ describe("battles on the map", () => {
       const side = activeStack(b)!.side;
       must(s, s.battles[0]!.sides[side] as string, { type: "battle", action: chooseAiBattleAction(b) });
     }
-    expect(s.winner).toBe("p0");
     expect(s.heroes["h1"]!.alive).toBe(false);
     expect(s.heroes["h1"]!.army).toEqual([]);
     expect(s.heroes["h0"]!.bag).toEqual(expect.arrayContaining(["ashBlade", "shield"]));
-    expect(player(s, "p1").defeated).toBe(true);
+    // p1 still holds a castle: the hero returns there the next morning with a militia
+    expect(player(s, "p1").defeated).toBe(false);
+    expect(s.winner).toBeNull();
+    must(s, "p0", { type: "endDay" });
+    must(s, "p1", { type: "endDay" });
+    const h1 = s.heroes["h1"]!;
+    const home = s.objects.find((o) => o.id === player(s, "p1").castleId)!;
+    expect(h1.alive).toBe(true);
+    expect([h1.x, h1.y]).toEqual([home.x, home.y]);
+    expect(h1.army).toEqual([{ unit: "skeleton", count: 10 }]);
+    expect(h1.mp).toBe(maxMovement(h1));
   });
 
-  it("a garrison battle won captures the castle and ends the game", () => {
+  it("a garrison battle won captures the castle and, with the owner's hero fallen, ends the game", () => {
     const s = newGame(22);
+    s.heroes["h1"]!.alive = false;
     s.heroes["h0"]!.army = [{ unit: "royalGriffin", count: 60 }, { unit: "marksman", count: 60 }];
     teleport(s, "h0", 10, 1);
     must(s, "p0", { type: "move", to: { x: 11, y: 1 } });
@@ -461,14 +472,20 @@ describe("battles on the map", () => {
     expect(s.winner).toBe("p0");
   });
 
-  it("losing to monsters kills the hero and defeats the player", () => {
+  it("losing to monsters kills the hero; it returns to the castle the next morning", () => {
     const s = newGame(23);
     s.heroes["h0"]!.army = [{ unit: "pike", count: 1 }];
     must(s, "p0", { type: "move", to: { x: 4, y: 12 } });
-    must(s, "p0", { type: "autoBattle" });
+    const r = must(s, "p0", { type: "autoBattle" });
     expect(s.heroes["h0"]!.alive).toBe(false);
-    expect(player(s, "p0").defeated).toBe(true);
-    expect(s.winner).toBe("p1");
+    expect(player(s, "p0").defeated).toBe(false);
+    expect(s.winner).toBeNull();
+    expect(r.events.some((e) => e.type === "toast" && e.player === "p0" && /вернётся в замок/.test(e.text))).toBe(true);
+    expectRejected(s, "p0", { type: "move", to: { x: 4, y: 13 } }, /герой погиб/);
+    must(s, "p0", { type: "endDay" });
+    expect(s.heroes["h0"]!.alive).toBe(true);
+    expect([s.heroes["h0"]!.x, s.heroes["h0"]!.y]).toEqual([2, 14]);
+    expect(s.heroes["h0"]!.army).toEqual([{ unit: "pike", count: 8 }]);
     const m = s.objects.find((o) => o.x === 4 && o.y === 11)!;
     expect(m.gone).toBeFalsy();
     expect(m.army![0]!.count).toBeGreaterThan(0);
@@ -492,11 +509,11 @@ describe("battles on the map", () => {
     expectRejected(s, "p0", { type: "move", to: { x: 4, y: 13 } }, /закончите бой/);
     must(s, "p0", { type: "autoBattle" });
     expect(s.heroes["h0"]!.alive).toBe(false);
-    expect(s.winner).toBe("p1");
+    expect(s.winner).toBeNull();
     expect(s.heroes["h1"]!.bag).toContain("sword");
   });
 
-  it("the AI takes an undefended human castle from day 8", () => {
+  it("the AI takes an undefended human castle from day 8; the human then has 7 days to win one back", () => {
     const s = newGame(32);
     s.day = 8;
     teleport(s, "h0", 13, 4);
@@ -504,9 +521,15 @@ describe("battles on the map", () => {
     teleport(s, "h1", 3, 14);
     const r = must(s, "p0", { type: "endDay" });
     expect(s.objects.find((o) => o.x === 2 && o.y === 14)!.owner).toBe("p1");
+    expect(player(s, "p0").defeated).toBe(false);
+    expect(player(s, "p0").homelessSince).toBe(8);
+    expect(r.events).toContainEqual({ type: "toast", player: "p0", text: "Без замка! Дней, чтобы отбить замок: 6." });
+    expect(income(s, "p0")).toBe(0);
+    player(s, "p0").homelessSince = s.day - 6;
+    const r2 = must(s, "p0", { type: "endDay" });
     expect(player(s, "p0").defeated).toBe(true);
     expect(s.winner).toBe("p1");
-    expect(r.events).toContainEqual({ type: "defeat", player: "p0" });
+    expect(r2.events).toContainEqual({ type: "defeat", player: "p0" });
   });
 
   it("autoBattle in a battle between humans only hands over the caller's stacks", () => {
@@ -522,7 +545,7 @@ describe("battles on the map", () => {
       must(s, "p1", { type: "battle", action: chooseAiBattleAction(b) });
     }
     expect(s.battles).toEqual([]);
-    expect(s.winner).not.toBeNull();
+    expect(Object.values(s.heroes).filter((h) => !h.alive)).toHaveLength(1);
   });
 
   it("nobody can join a battle that is already running", () => {

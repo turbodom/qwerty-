@@ -2,7 +2,9 @@
 import { ROOM_CODE_MAX } from "@korony/shared";
 import type { User } from "../api";
 import { t } from "../i18n";
-import { STORAGE_KEYS, readItem } from "../storage";
+import { STORAGE_KEYS, readItem, writeItem } from "../storage";
+import { AI_MAP_CHOICES, DEFAULT_MAP_ID } from "../config";
+import type { AiMapChoice } from "../config";
 import { artUrl } from "../gfx/artUrls";
 import { h } from "./dom";
 import { settingsBlock } from "./panels/misc";
@@ -31,6 +33,48 @@ const NAME_RE = /^[\p{L}\p{N}_-]{2,20}$/u;
 
 function crest(): HTMLElement {
   return h("img", { class: "crest", src: artUrl("logo"), alt: "" });
+}
+
+/** Map chosen for the next game against the AI (remembered in storage). */
+export function chosenAiMap(): AiMapChoice {
+  const saved = readItem(STORAGE_KEYS.aiMap);
+  return (AI_MAP_CHOICES as readonly string[]).includes(saved ?? "") ? (saved as AiMapChoice) : DEFAULT_MAP_ID;
+}
+
+function mapLabel(id: AiMapChoice): string {
+  switch (id) {
+    case "random-s": return t("lobby.mapSize.s");
+    case "random-m": return t("lobby.mapSize.m");
+    case "random-l": return t("lobby.mapSize.l");
+    case "valley": return t("lobby.mapSize.valley");
+  }
+}
+
+function mapPicker(api: ScreenApi): HTMLElement {
+  const current = chosenAiMap();
+  return h(
+    "div",
+    { class: "row", testid: "ai-map" },
+    h("span", { class: "muted" }, t("lobby.mapSize")),
+    h(
+      "div",
+      { style: "display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end" },
+      ...AI_MAP_CHOICES.map((id) =>
+        h(
+          "button",
+          {
+            class: id === current ? "btn small" : "btn ghost small",
+            testid: `ai-map-${id}`,
+            onClick: () => {
+              writeItem(STORAGE_KEYS.aiMap, id);
+              api.rerender();
+            },
+          },
+          mapLabel(id),
+        ),
+      ),
+    ),
+  );
 }
 
 function header(): HTMLElement[] {
@@ -183,6 +227,7 @@ export function lobbyScreen(api: ScreenApi): HTMLElement {
     h(
       "div",
       { class: "card" },
+      mapPicker(api),
       h("button", { class: "btn block", testid: "play-ai", onClick: () => api.playAi(true) }, t("lobby.playAi")),
       saved !== null
         ? h(

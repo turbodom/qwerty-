@@ -14,3 +14,15 @@ export function approxCount(n: number): string {
 export const CHEST_GOLD = 1000;
 /** Maximum number of stacks in a hero's army (hiring a new unit type is refused beyond it). */
 export const MAX_ARMY_STACKS = 5;
+/** Days a player whose hero lives on may stay without a castle before losing. */
+export const HOMELESS_DAYS = 7;
+/** Creatures added to the garrison of every castle a player owns at the start of each week (tier 1 of the owner). */
+export const GARRISON_WEEKLY: Record<"castle" | "necropolis", { unit: "pike" | "skeleton"; count: number }> = {
+  castle: { unit: "pike", count: 5 },
+  necropolis: { unit: "skeleton", count: 6 },
+};
+/** Army a fallen hero returns with to one of the player's castles the next morning. */
+export const REVIVE_ARMY: Record<"castle" | "necropolis", { unit: "pike" | "skeleton"; count: number }> = {
+  castle: { unit: "pike", count: 8 },
+  necropolis: { unit: "skeleton", count: 10 },
+};

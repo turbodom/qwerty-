@@ -11,7 +11,7 @@ import { BUILDINGS } from "./data/buildings";
 import { BUILDING_GROWTH, FACTION_UNITS, HIRE_REQUIRES, START_GROWTH, isNewWeek, weekOf, weeklyGrowth } from "./data/growth";
 import type { QuestId } from "./data/quests";
 import { QUESTS } from "./data/quests";
-import { CHEST_GOLD, DAYS_PER_WEEK, DROP_CHANCE, MAX_ARMY_STACKS } from "./data/rules";
+import { CHEST_GOLD, DAYS_PER_WEEK, DROP_CHANCE, GARRISON_WEEKLY, HOMELESS_DAYS, MAX_ARMY_STACKS, REVIVE_ARMY } from "./data/rules";
 import type { SkillId } from "./data/skills";
 import { SKILLS, SKILL_IDS, expToNext } from "./data/skills";
 import type { SpellId } from "./data/spells";
@@ -19,14 +19,17 @@ import { SPELLS, SPELL_IDS } from "./data/spells";
 import { baseStats } from "./data/stats";
 import type { UnitId } from "./data/units";
 import { UNITS, UPGRADES } from "./data/units";
-import { MAPS, mapStart } from "./maps";
+import { mapStart } from "./maps";
+import { resolveMap } from "./mapgen";
 import { effectiveStats, equip, maxMovement, mergeArmy, pickUp, unequip } from "./hero";
-import { emptyExplored, findPath, getPlayer, guardOf, income, isExplored, objectAt, reveal, revealAll } from "./map";
+import {
+  emptyExplored, findPath, getPlayer, guardOf, heroAt, income, isExplored, objectAt, ownedCastles, reveal, revealAll,
+} from "./map";
 import {
   AUTO_RESOLVE_LIMIT, activeStack, applyAiBattleAction, applyBattleAction, autoResolve, battleExp, battleLayoutSeed,
   battleSurvivors, createBattle,
 } from "./battle";
-import { AI_SKILL_POOL, aiRecruit, planAiMove } from "./ai";
+import { AI_SKILL_POOL, aiBuild, aiRecruit, aiUpgrade, planAiMove } from "./ai";
 import { isGameAction } from "./protocol";
 
 /** Log lines kept in GameState.log (oldest dropped first). */
@@ -161,11 +164,12 @@ function clampMp(hero: Hero): void {
 // ================= creation =================
 
 /**
- * New game on MAPS[mapId]: seat 0 plays the castle faction, seat 1 the necropolis.
+ * New game on MAPS[mapId] or on a fresh procedural map for a "random-<size>" id (built from the seed):
+ * seat 0 plays the castle faction, seat 1 the necropolis.
  * Loadouts: startArtifact is equipped when its slot is free (bag otherwise), startGold added, banner kept.
  */
 export function createGame(opts: CreateGameOptions): GameState {
-  const map = MAPS[opts.mapId];
+  const map = resolveMap(opts.mapId, opts.seed);
   if (!map) throw new Error(`unknown map ${opts.mapId}`);
   const setups = opts.players;
   if (setups.length !== 2 || !setups[0].id || !setups[1].id || setups[0].id === setups[1].id) {
@@ -292,12 +296,65 @@ function defeat(ctx: Ctx, playerId: PlayerId, why: string): void {
   }
 }
 
+/**
+ * A player is out once they have neither a castle nor a living hero. A fallen hero of a player who
+ * still holds a castle returns there the next morning (see reviveHeroes).
+ */
+function checkDefeat(ctx: Ctx, playerId: PlayerId, why: string): void {
+  const p = getPlayer(ctx.state, playerId);
+  if (!p || p.defeated) return;
+  const hero = ctx.state.heroes[p.heroId];
+  if (ownedCastles(ctx.state, p.id).length === 0 && (!hero || !hero.alive)) defeat(ctx, p.id, why);
+}
+
 function killHero(ctx: Ctx, hero: Hero, why: string): void {
   if (!hero.alive) return;
   hero.alive = false;
   hero.army = [];
   hero.mp = 0;
-  defeat(ctx, hero.owner, why);
+  const p = getPlayer(ctx.state, hero.owner);
+  if (p && !p.defeated && ownedCastles(ctx.state, p.id).length > 0) {
+    pushLog(ctx.state, `${p.name}: ${hero.name} отступает в замок`);
+    toast(ctx, `${hero.name} разбит и вернётся в замок завтра с отрядом ополчения.`, p.id);
+  }
+  checkDefeat(ctx, hero.owner, why);
+}
+
+/** Morning: fallen heroes of players who still hold a castle return there with a small militia. */
+function reviveHeroes(ctx: Ctx): void {
+  const { state } = ctx;
+  for (const p of state.players) {
+    const hero = state.heroes[p.heroId];
+    if (p.defeated || !hero || hero.alive || p.faction === "neutral" || isInBattle(state, p.id)) continue;
+    const castles = ownedCastles(state, p.id);
+    const home = [castles.find((o) => o.id === p.castleId), ...castles].find((o) => o && !heroAt(state, o.x, o.y));
+    if (!home) continue;
+    const militia = REVIVE_ARMY[p.faction];
+    hero.alive = true;
+    hero.x = home.x;
+    hero.y = home.y;
+    hero.army = [{ unit: militia.unit, count: militia.count }];
+    hero.mp = maxMovement(hero);
+    reveal(state, p.id);
+    toast(ctx, `${hero.name} вернулся в замок и снова готов к походу.`, p.id);
+  }
+}
+
+/** Losing the last castle starts a countdown; after HOMELESS_DAYS without one the player is out. */
+function checkHomeless(ctx: Ctx): void {
+  const { state } = ctx;
+  for (const p of state.players) {
+    if (p.defeated || state.winner !== null) continue;
+    if (ownedCastles(state, p.id).length > 0) {
+      delete p.homelessSince;
+      continue;
+    }
+    const since = p.homelessSince ?? state.day;
+    p.homelessSince = since;
+    const left = HOMELESS_DAYS - (state.day - since);
+    if (left <= 0) defeat(ctx, p.id, `${HOMELESS_DAYS} дней без замка.`);
+    else toast(ctx, `Без замка! Дней, чтобы отбить замок: ${left}.`, p.id);
+  }
 }
 
 /** Found artifact (map or monster drop): equipped when its slot is free, else bagged; counts for the artifact quest. */
@@ -320,8 +377,21 @@ function capture(ctx: Ctx, newOwner: PlayerId, castle: MapObject): void {
   if (p) pushLog(state, `${p.name} захватывает замок`);
   toast(ctx, p ? `${p.name} захватывает замок!` : "Замок захвачен!");
   completeQuest(ctx, newOwner, "conquer");
+  if (p) {
+    delete p.homelessSince;
+    // a player who lost the home castle makes the captured one the new home
+    if (!ownedCastles(state, p.id).some((o) => o.id === p.castleId)) p.castleId = castle.id;
+  }
   const prevPlayer = prev ? getPlayer(state, prev) : undefined;
-  if (prevPlayer && prevPlayer.castleId === castle.id) defeat(ctx, prevPlayer.id, "Замок захвачен.");
+  if (!prevPlayer || prevPlayer.defeated) return;
+  const left = ownedCastles(state, prevPlayer.id);
+  const next = left[0];
+  if (prevPlayer.castleId === castle.id && next) prevPlayer.castleId = next.id;
+  checkDefeat(ctx, prevPlayer.id, "Замок захвачен.");
+  if (!prevPlayer.defeated && left.length === 0) {
+    prevPlayer.homelessSince = state.day;
+    toast(ctx, `Последний замок потерян! У вас ${HOMELESS_DAYS} дней, чтобы захватить замок.`, prevPlayer.id);
+  }
 }
 
 // ================= battles =================
@@ -448,6 +518,24 @@ function finishBattle(ctx: Ctx, ab: ActiveBattle): void {
 
 // ================= movement =================
 
+/**
+ * A hero attacked inside its own castle is joined by the garrison (stacks that fit into the army);
+ * whoever survives stays with the hero.
+ */
+function joinGarrison(ctx: Ctx, defender: Hero): void {
+  const o = objectAt(ctx.state, defender.x, defender.y);
+  if (!o || o.kind !== "castle" || o.owner !== defender.owner || !hasGarrison(o)) return;
+  let army = mergeArmy(defender.army);
+  const rest: ArmyStack[] = [];
+  for (const s of mergeArmy(o.garrison ?? [])) {
+    if (army.length < MAX_ARMY_STACKS || army.some((a) => a.unit === s.unit)) army = mergeArmy([...army, s]);
+    else rest.push(s);
+  }
+  defender.army = army;
+  o.garrison = rest;
+  toast(ctx, "Гарнизон замка встаёт на защиту вместе с героем!", defender.owner);
+}
+
 /** Handles what the hero finds on its tile. Returns true when the move must stop here. */
 function arrive(ctx: Ctx, p: PlayerState, hero: Hero): boolean {
   const { state } = ctx;
@@ -458,6 +546,7 @@ function arrive(ctx: Ctx, p: PlayerState, hero: Hero): boolean {
   }
   const eh = enemyHeroAt(state, hero, x, y);
   if (eh) {
+    joinGarrison(ctx, eh);
     startBattle(ctx, "hero", [p.id, eh.owner], [hero.army, eh.army], [hero, eh]);
     return true;
   }
@@ -554,16 +643,31 @@ function endOfDay(ctx: Ctx): void {
     const week = weekOf(state.day);
     for (const p of live) {
       if (p.faction === "neutral") continue;
+      // every castle the player holds adds a week of creatures (a captured fortress doubles the growth)
+      const castles = ownedCastles(state, p.id).length;
       const add = weeklyGrowth(p.faction, week, p.built);
-      for (const [unit, n] of Object.entries(add) as [UnitId, number][]) p.growth[unit] = (p.growth[unit] ?? 0) + n;
+      for (const [unit, n] of Object.entries(add) as [UnitId, number][]) p.growth[unit] = (p.growth[unit] ?? 0) + n * castles;
+    }
+    for (const o of state.objects) {
+      const owner = o.kind === "castle" && !o.gone && o.owner ? getPlayer(state, o.owner) : undefined;
+      if (!owner || owner.defeated || owner.faction === "neutral" || objectInBattle(state, o.id)) continue;
+      const add = GARRISON_WEEKLY[owner.faction];
+      o.garrison = mergeArmy([...(o.garrison ?? []), { unit: add.unit, count: add.count }]);
     }
     ctx.events.push({ type: "newWeek" });
     toast(ctx, "Новая неделя! В замке новые войска.");
   }
+  checkHomeless(ctx);
+  if (state.winner !== null) return;
+  reviveHeroes(ctx);
   for (const p of live) {
     // An AI hero still fighting a human keeps its pre-battle army until the battle ends: no recruiting then.
-    if (!p.isAI || isInBattle(state, p.id)) continue;
+    if (!p.isAI || p.defeated || isInBattle(state, p.id)) continue;
+    const built = aiBuild(state, p.id);
+    if (built) ctx.events.push({ type: "gold", player: p.id, amount: -built.gold, reason: "build" });
     for (const hired of aiRecruit(state, p.id)) ctx.events.push({ type: "gold", player: p.id, amount: -hired.gold, reason: "hire" });
+    const upgraded = aiUpgrade(state, p.id);
+    if (upgraded > 0) ctx.events.push({ type: "gold", player: p.id, amount: -upgraded, reason: "upgrade" });
   }
   for (const p of state.players) {
     p.builtToday = false;
@@ -724,8 +828,9 @@ function actChooseSkill(index: 0 | 1): Handler {
     if (!choice) return "Нет навыка для выбора";
     const id = choice[index];
     if (!id || !SKILLS[id]) return "Нет такого варианта";
+    // a fallen hero keeps its level and returns, so the choice can still be made
     const hero = ctx.state.heroes[p.heroId];
-    if (!hero || !hero.alive) return "Ваш герой погиб";
+    if (!hero) return "Ваш герой погиб";
     p.levelChoices.shift();
     applySkill(hero, id);
     toast(ctx, `Навык: ${SKILLS[id].name} (${SKILLS[id].desc})`, p.id);

@@ -27,7 +27,7 @@ function hero(view: PlayerView) {
 
 describe("LocalGame", () => {
   it("creates a game with the human at seat 0 and the AI at seat 1, and saves it", () => {
-    const game = LocalGame.create({ seed: 12345 });
+    const game = LocalGame.create({ seed: 12345, mapId: "valley" });
     const view = game.view;
     expect(view).not.toBeNull();
     if (!view) return;
@@ -43,6 +43,14 @@ describe("LocalGame", () => {
     expect(LocalGame.savedDay()).toBe(1);
   });
 
+  it("plays a fresh random map by default", () => {
+    const a = LocalGame.create({ seed: 1 }).snapshot();
+    const b = LocalGame.create({ seed: 2 }).snapshot();
+    expect(a.mapId).toBe("random-m");
+    expect([a.cols, a.rows]).toEqual([39, 39]);
+    expect(JSON.stringify(a.terrain)).not.toBe(JSON.stringify(b.terrain));
+  });
+
   it("uses crypto for seeds", () => {
     const a = randomSeed();
     const b = randomSeed();
@@ -51,7 +59,7 @@ describe("LocalGame", () => {
   });
 
   it("moves the hero, notifies subscribers and persists after the action", async () => {
-    const game = LocalGame.create({ seed: 7 });
+    const game = LocalGame.create({ seed: 7, mapId: "valley" });
     const seen: { view: PlayerView; events: GameEvent[] }[] = [];
     const unsub = game.subscribe((view, events) => seen.push({ view, events }));
     expect(seen).toHaveLength(1); // current view right away
@@ -77,7 +85,7 @@ describe("LocalGame", () => {
   });
 
   it("rejects illegal actions without touching the state or the save", async () => {
-    const game = LocalGame.create({ seed: 99 });
+    const game = LocalGame.create({ seed: 99, mapId: "valley" });
     const raw = mem.getItem(STORAGE_KEYS.localSave);
     const res = await game.send({ type: "build", building: "forge" }); // hero is not in the castle
     expect(res.ok).toBe(false);
@@ -86,7 +94,7 @@ describe("LocalGame", () => {
   });
 
   it("endDay advances the day, runs the AI and gives income", async () => {
-    const game = LocalGame.create({ seed: 2024 });
+    const game = LocalGame.create({ seed: 2024, mapId: "valley" });
     const gold0 = hero(game.view as PlayerView).me.gold;
     await game.send({ type: "move", to: { x: 5, y: 14 } });
     const res = await game.send({ type: "endDay" });
@@ -102,7 +110,7 @@ describe("LocalGame", () => {
   });
 
   it("save/load round trip restores the exact state", async () => {
-    const game = LocalGame.create({ seed: 31337 });
+    const game = LocalGame.create({ seed: 31337, mapId: "valley" });
     await game.send({ type: "move", to: { x: 5, y: 14 } });
     await game.send({ type: "endDay" });
     const snap = game.snapshot();
@@ -132,7 +140,7 @@ describe("LocalGame", () => {
   });
 
   it("walking into a guarded tile starts a battle that autoBattle finishes", async () => {
-    const game = LocalGame.create({ seed: 5 });
+    const game = LocalGame.create({ seed: 5, mapId: "valley" });
     // (4,12) is next to the wolves at (4,11)
     const res = await game.send({ type: "move", to: { x: 4, y: 12 } });
     expect(res.ok).toBe(true);
