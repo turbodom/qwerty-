@@ -4,6 +4,7 @@ Usage: XAI_API_KEY=... python3 edit.py <input.png|jpg> <output.jpg> <model> <pro
 Map landscape: node layout.cjs (writes layout.png from the map terrain), then
   python3 edit.py layout.png raw/map-valley.jpg grok-imagine-image-2.0 prompts/map.txt
 Hero gear tiers: python3 edit.py raw/hero-body-player-0.jpg raw/hero-body-player-1.jpg grok-imagine-image-2.0 prompts/hero-player-1.txt
+City detail pass: python3 edit.py raw/city-player-3.jpg raw/city-player-3-detail.jpg grok-imagine-image-2.0 prompts/city-detail.txt
 """
 import json, base64, urllib.request, sys, os
 K = os.environ["XAI_API_KEY"]
