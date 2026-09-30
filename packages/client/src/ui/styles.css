@@ -339,6 +339,34 @@ button.pd-slot { cursor: pointer; font: inherit; color: inherit; }
   min-height: 0;
 }
 .pd-figure img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 15%; display: block; }
+/* hero sheet: level / experience / power header, attribute list, ability bar and inventory grid */
+.hero-head { display: flex; align-items: center; gap: 10px; }
+.hero-head .grow { flex: 1; min-width: 0; display: grid; gap: 4px; }
+.hero-lvl, .hero-power { display: grid; justify-items: center; line-height: 1.05; padding: 4px 8px; border-radius: 8px; border: 1px solid var(--frame); background: rgba(0, 0, 0, 0.45); }
+.hero-lvl small, .hero-power small { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.hero-lvl b { font: 700 22px var(--display); color: var(--gold-2); }
+.hero-power b { font: 600 17px var(--display); color: #fff3cf; font-variant-numeric: tabular-nums; }
+.hero-xp { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.hero-stats { display: grid; border: 1px solid #3a3325; border-radius: 10px; overflow: hidden; background: rgba(0, 0, 0, 0.4); }
+.hero-stat { display: grid; grid-template-columns: 26px 1fr auto; align-items: center; gap: 8px; padding: 5px 10px; font-size: 14px; }
+.hero-stat + .hero-stat { border-top: 1px solid rgba(255, 255, 255, 0.06); }
+.hero-stat img, .hero-stat-ico { width: 26px; height: 26px; object-fit: contain; display: grid; place-items: center; color: var(--gold); font-weight: 700; }
+.hero-stat b { font: 600 15px var(--display); color: #fff3cf; font-variant-numeric: tabular-nums; }
+.hero-abilities { display: flex; flex-wrap: wrap; gap: 8px; }
+.hero-ability { display: grid; justify-items: center; gap: 2px; width: 64px; font-size: 10.5px; text-align: center; color: var(--muted); }
+.hero-ability img { width: 52px; height: 52px; object-fit: contain; border-radius: 8px; border: 1px solid #4f8fd0; background: radial-gradient(circle, rgba(79, 143, 208, 0.3), rgba(0, 0, 0, 0.7)); box-shadow: 0 0 10px rgba(79, 143, 208, 0.35); }
+.inv-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.inv-cell { aspect-ratio: 1; padding: 0; display: grid; place-items: center; border-radius: 7px; border: 1px solid #3c3e44; background: radial-gradient(circle at 50% 40%, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.6)), #131417; }
+button.inv-cell { cursor: pointer; }
+.inv-cell img { width: 78%; height: 78%; object-fit: contain; filter: drop-shadow(0 2px 2px #000); }
+.inv-cell.r0 { border-color: #8b8474; }
+.inv-cell.r1 { border-color: #4f8fd0; box-shadow: inset 0 0 10px rgba(79, 143, 208, 0.35); }
+.inv-cell.r2 { border-color: #a36fdc; box-shadow: inset 0 0 10px rgba(163, 111, 220, 0.45); }
+.inv-cell.r3 { border-color: #f0a64a; box-shadow: inset 0 0 12px rgba(240, 166, 74, 0.55); }
+.inv-cell.sel { outline: 2px solid #fff; outline-offset: 1px; }
+.inv-detail { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 10px; border: 1px solid #5c4820; background: rgba(0, 0, 0, 0.5); }
+.inv-detail img { width: 52px; height: 52px; object-fit: contain; }
+.inv-detail .grow { flex: 1; min-width: 0; font-size: 13px; }
 .fx { color: var(--muted); font-size: 12px; }
 .item-row { display: flex; align-items: center; gap: 10px; background: rgba(0, 0, 0, 0.38); border: 1px solid #5c4820; border-radius: 10px; padding: 8px; }
 .item-row .grow { flex: 1; min-width: 0; }
