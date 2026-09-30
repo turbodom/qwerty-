@@ -35,7 +35,7 @@ U = {
 }
 for k, v in U.items(): a("unit-" + k, "Photorealistic character sprite: " + v + ".", "unit")
 # battle
-a("battle-bg", "Tactical battlefield seen from above at a steep angle: a cracked asphalt street in a ruined city with rubble, puddles, faded road markings, burned debris only at the edges, the center completely open and flat, no people, no vehicles in the middle.", "bg", "3:4")
+a("battle-bg", "Straight top-down overhead drone view, looking directly down, no horizon, no sky: a ruined city square after heavy fighting at sunset. Around the edges of the frame: roofs of collapsed concrete buildings, a burned-out rusty bus seen from above, a wrecked tank seen from above, sandbag barricades, concrete blocks, burning cars with bright orange flames and drifting black smoke, rubble piles. The large centre area is open flat cracked dark asphalt with puddles reflecting orange fire light, a faded zebra crossing and small debris, clear for combat. No people. Warm fire glow against cool blue shadows, cinematic, ultra detailed, sharp.", "bg", "3:4")
 a("rock1", "A cover obstacle: a burned-out rusty car wreck.")
 a("rock2", "A cover obstacle: a pile of concrete road barriers and sandbags.")
 # heroes (screen)
