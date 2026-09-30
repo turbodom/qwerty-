@@ -485,6 +485,14 @@ details.help ul { margin: 6px 0 0; padding-left: 18px; color: var(--muted); font
 .wpoi.sel .wbadge { filter: drop-shadow(0 0 8px #fff) drop-shadow(0 3px 3px #000); transform: scale(1.12); }
 .wpoi.sel .wlabel { border-color: #fff; }
 @keyframes reach-pulse { 50% { opacity: 0.25; } }
+/* fitted (whole map on a phone): compact badges without labels so the painted map shows through */
+.wmap:not(.zoomed) .wlabel, .wmap:not(.zoomed) .wlvl { display: none; }
+.wmap:not(.zoomed) .wbadge { width: 22px; height: 25px; }
+.wmap:not(.zoomed) .wbadge .wico { width: 13px; height: 13px; margin-top: -3px; }
+.wmap:not(.zoomed) .wpoi.k-citadel .wbadge { width: 32px; height: 36px; }
+.wmap:not(.zoomed) .wpoi.k-citadel .wbadge .wico { width: 19px; height: 19px; }
+.wmap:not(.zoomed) .wpoi.small .wbadge { width: 9px; height: 9px; }
+@media (min-width: 760px) { .wmap:not(.zoomed) .wlabel { display: -webkit-box; } }
 .wlegend {
   display: flex; flex-wrap: wrap; justify-content: center; gap: 2px 12px; padding: 5px 8px; border-top: 1px solid var(--frame);
   background: linear-gradient(rgba(16, 17, 19, 0.92), rgba(6, 7, 8, 0.98)); font-size: 11px; color: #e9dfc4;
