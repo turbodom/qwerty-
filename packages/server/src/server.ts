@@ -15,6 +15,8 @@ import { createMatchRoom } from "./rooms/MatchRoom";
 import { matchFilter } from "./rooms/matchLogic";
 import { MemoryStore } from "./store";
 import type { Store } from "./store";
+import { FileSnapshots, NoSnapshots, UpstashSnapshots, WorldService } from "./world";
+import type { WorldSnapshots } from "./world";
 
 export interface StartOptions {
   config: Config;
@@ -27,6 +29,8 @@ export interface StartOptions {
   /** `matchmake` limits Colyseus matchmaking requests (`/matchmake/...`) per client IP. */
   rateLimits?: AppDeps["rateLimits"] & { matchmake?: RateLimitOptions };
   now?: () => number;
+  /** Overrides the snapshot store chosen from config (tests). */
+  worldSnapshots?: WorldSnapshots;
 }
 
 export interface RunningServer {
@@ -34,6 +38,7 @@ export interface RunningServer {
   httpServer: HttpServer;
   gameServer: ColyseusServer;
   store: Store;
+  world: WorldService;
   /** Disconnects rooms, closes sockets and the http server. */
   close(): Promise<void>;
 }
@@ -60,9 +65,19 @@ export async function startServer(opts: StartOptions): Promise<RunningServer> {
   const store = opts.store ?? new MemoryStore(now);
   const pi = opts.pi ?? new PiClient({ apiBase: config.piApiBase, apiKey: config.piApiKey });
   const auth = createSessionAuth(config.sessionSecret);
+  const snapshots: WorldSnapshots = opts.worldSnapshots
+    ?? (config.upstashUrl && config.upstashToken
+      ? new UpstashSnapshots(config.upstashUrl, config.upstashToken)
+      : config.worldFile
+        ? new FileSnapshots(config.worldFile)
+        : new NoSnapshots());
+  const world = new WorldService({
+    now, dayMs: config.worldDayMinutes * 60_000, seasonDays: config.worldSeasonDays, snapshots,
+    log: (m) => console.log(m),
+  });
 
   const app = createApp({
-    config, store, pi, auth, now,
+    config, store, pi, auth, now, world,
     ...(opts.clientDist !== undefined ? { clientDist: opts.clientDist } : {}),
     ...(opts.rateLimits ? { rateLimits: opts.rateLimits } : {}),
   });
@@ -104,9 +119,10 @@ export async function startServer(opts: StartOptions): Promise<RunningServer> {
         await new Promise<void>((resolve) => httpServer.close(() => resolve()));
       }
       httpServer.closeAllConnections();
+      await world.flush();
     })();
     return closing;
   };
 
-  return { port, httpServer, gameServer, store, close };
+  return { port, httpServer, gameServer, store, world, close };
 }

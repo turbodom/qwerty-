@@ -219,6 +219,21 @@ export const ROOM_NAME = "match";
 export interface AuthResponse { token: string; user: { uid: string; username: string; premiumUntil: number | null; banner: string | null; owned: string[] } }
 ```
 
+### Сезонная Пустошь (`world.ts`)
+Общая карта сезона для всех игроков. Состояние `WorldState` тоже простой JSON, время приходит снаружи как `now` (мс),
+случайность из `WorldState.rngState`.
+```ts
+export const WORLD_LAYOUT: readonly string[];   // 9×9: "." пустошь, m шахта, r руины, z зона заражения, f форт, C Цитадель
+export function createWorld(opts: { seed: number; now: number; season?: number; dayMs?: number; seasonDays?: number }): WorldState;
+export function advanceWorld(state: WorldState, now: number): number;   // прошедшие дни: доход, рост охраны, наём, рейдеры, боссы и тайники, конец сезона
+export function applyWorldAction(state: WorldState, actor: { id: PlayerId; name: string }, action: WorldAction, now: number): WorldResult;
+export function worldView(state: WorldState, playerId: PlayerId | null, now: number): WorldView;   // чужие гарнизоны только приблизительно
+export type WorldAction = join | attack | hire | reinforce | withdraw | createClan | joinClan | leaveClan | donate | fortify;
+```
+Бой на общей карте это обычный тактический бой, который ИИ доигрывает за обе стороны (`autoResolve`), поэтому игрок вне сети
+защищается оставленными гарнизонами. Три клана рейдеров (боты) держат часть земли и растут до `BOT_MAX_SECTORS`, но не
+отнимают землю у людей. Клан, удержавший Цитадель к концу сезона, попадает в зал славы; игроки и кланы переходят в новый сезон.
+
 ## Сервер
 
 - `POST /api/auth/pi` `{ accessToken }` проверяет токен запросом `GET {PI_API_BASE}/v2/me` с заголовком
@@ -236,6 +251,10 @@ export interface AuthResponse { token: string; user: { uid: string; username: st
     и `status.transaction_verified`, `POST /v2/payments/{id}/complete` с `{ txid }`, выдать товар. Идемпотентно: второй вызов ничего не выдаёт повторно.
   - `POST /api/payments/incomplete` `{ payment }`: для `onIncompletePaymentFound`, довести платёж до конца или отменить.
 - Хранилище за интерфейсом `Store` (пользователи, покупки, платежи). Сейчас `MemoryStore`; PostgreSQL следующим шагом.
+- Сезонная Пустошь: `GET /api/world` (вид мира для игрока) и `POST /api/world/action` `{ action }` → `{ result, view }`.
+  Нарушение правил приходит как `result.ok = false`, ошибка формата как 400. Мир один на сервер (`WorldService`), хранится
+  в памяти и сохраняется снимком через 2 секунды после изменения: в Upstash Redis по REST (`UPSTASH_REDIS_REST_URL`,
+  `UPSTASH_REDIS_REST_TOKEN`), иначе в файл `WORLD_FILE`, иначе нигде. Длина дня и сезона: `WORLD_DAY_MINUTES` (1440), `WORLD_SEASON_DAYS` (28).
 - Colyseus-комната `match` (2 игрока, PvP): `onAuth` проверяет токен сессии, `onJoin` сажает игрока, при двух игроках
   `createGame` с покупками (`loadout`), `onMessage("action")` проверяет сообщение `isClientMessage`, вызывает `applyAction`
   и шлёт каждому игроку `{ t: "view", view: playerView(state, p), events: eventsForPlayer(state, p, result.events) }`.

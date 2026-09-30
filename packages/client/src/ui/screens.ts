@@ -21,6 +21,7 @@ export interface ScreenApi {
   playOnline(code?: string): void;
   resumeOnline(): void;
   openShop(): void;
+  openWorld(): void;
   cancelOnline(): void;
   rerender(): void;
 }
@@ -172,6 +173,20 @@ export function lobbyScreen(api: ScreenApi): HTMLElement {
           )
         : null,
       h("p", { class: "fx" }, t("lobby.playAiHint")),
+    ),
+  );
+
+  // the shared seasonal world
+  inner.append(
+    h(
+      "div",
+      { class: "card world-card" },
+      h("img", { class: "world-card-art", src: artUrl("world-map"), alt: "" }),
+      h("h2", null, t("world.title")),
+      h("p", { class: "fx" }, user ? t("world.lobbyHint") : t("world.needsLogin")),
+      user
+        ? h("button", { class: "btn block", testid: "open-world", onClick: () => api.openWorld() }, t("world.open"))
+        : h("button", { class: "btn ghost block", onClick: () => api.goLogin() }, t("lobby.login")),
     ),
   );
 
