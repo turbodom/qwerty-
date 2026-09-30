@@ -37,11 +37,30 @@ function header(): HTMLElement[] {
   return [crest(), h("h1", null, t("app.title")), h("p", { class: "sub" }, t("app.subtitle"))];
 }
 
+/** Rising embers over the poster art (a dozen CSS particles with a fixed life; none with reduced motion). */
+function embers(): HTMLElement {
+  const box = h("div", { class: "embers" });
+  for (let i = 0; i < 14; i++) {
+    const e = h("i");
+    e.style.setProperty("--x", `${(i * 37) % 100}%`);
+    e.style.setProperty("--d", `${5 + ((i * 7) % 6)}s`);
+    e.style.setProperty("--delay", `${-((i * 1.3) % 8)}s`);
+    e.style.setProperty("--s", `${2 + (i % 3)}px`);
+    box.append(e);
+  }
+  return box;
+}
+
+/** The first impression: the key art with the crest and the title over it. */
+function poster(): HTMLElement {
+  return h("div", { class: "poster" }, embers(), h("div", { class: "poster-title" }, header()));
+}
+
 let loginBusy = false;
 let loginError = "";
 
 export function loginScreen(api: ScreenApi): HTMLElement {
-  const inner = h("div", { class: "inner" }, header());
+  const inner = h("div", { class: "inner" }, poster());
   const card = h("div", { class: "card" }, h("h2", null, t("login.title")));
   const pi = api.piState();
   if (pi === "checking") {
@@ -132,7 +151,7 @@ let codeError = "";
 
 export function lobbyScreen(api: ScreenApi): HTMLElement {
   const user = api.user();
-  const inner = h("div", { class: "inner" }, header());
+  const inner = h("div", { class: "inner" }, poster());
 
   // account
   const premium = user?.premiumUntil && user.premiumUntil > Date.now();

@@ -15,7 +15,7 @@ import { icon, portraitUrl, resetMapScroll, sectorLevel, sectorName, worldMap } 
 
 export interface WorldScreenApi {
   back(): void;
-  toast(text: string, kind?: "info" | "error"): void;
+  toast(text: string, kind?: "info" | "error" | "reward"): void;
 }
 
 type Tab = "map" | "clan" | "rating" | "events";

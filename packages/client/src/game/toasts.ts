@@ -7,6 +7,8 @@ import { artifactFx, artifactName, engineText, questName } from "../i18n/catalog
 
 export interface Feedback {
   toasts: string[];
+  /** Parallel to `toasts`: true for rewards (artifacts, quests, levels), shown with the reward style. */
+  rewards: boolean[];
   sounds: SfxName[];
 }
 
@@ -18,7 +20,12 @@ export interface Feedback {
  */
 export function feedbackFromEvents(events: readonly GameEvent[], you: PlayerId, state?: GameState): Feedback {
   const toasts: string[] = [];
+  const rewards: boolean[] = [];
   const sounds: SfxName[] = [];
+  const reward = (text: string): void => {
+    toasts.push(text);
+    rewards[toasts.length - 1] = true;
+  };
   let skipNextToast = false;
   let leveled = false;
   const sound = (s: SfxName): void => {
@@ -45,7 +52,7 @@ export function feedbackFromEvents(events: readonly GameEvent[], you: PlayerId, 
         if (e.player !== you) break;
         const a = ARTIFACTS[e.artifact];
         const rarity = t(`rarity.${a.rarity}` as I18nKey);
-        toasts.push(
+        reward(
           t("toast.artifact", {
             rarity: rarity.charAt(0).toUpperCase() + rarity.slice(1),
             name: artifactName(e.artifact),
@@ -53,7 +60,7 @@ export function feedbackFromEvents(events: readonly GameEvent[], you: PlayerId, 
           }),
         );
         skipNextToast = true;
-        sound("coin");
+        sound(a.rarity >= 1 ? "reward" : "coin");
         break;
       }
       case "quest": {
@@ -62,7 +69,7 @@ export function feedbackFromEvents(events: readonly GameEvent[], you: PlayerId, 
         let text = t("toast.quest", { name: q ? questName(q.id) : e.quest });
         if (q?.gold) text += ` · ${t("quests.gold", { n: fmtNum(q.gold) })}`;
         if (q?.exp) text += ` · ${t("quests.exp", { n: fmtNum(q.exp) })}`;
-        toasts.push(text);
+        reward(text);
         skipNextToast = true;
         sound("level");
         break;
@@ -70,7 +77,7 @@ export function feedbackFromEvents(events: readonly GameEvent[], you: PlayerId, 
       case "level":
         if (e.player === you && !leveled) {
           leveled = true;
-          toasts.push(t("toast.level"));
+          reward(t("toast.level"));
           sound("level");
         }
         break;
@@ -108,5 +115,5 @@ export function feedbackFromEvents(events: readonly GameEvent[], you: PlayerId, 
         break;
     }
   }
-  return { toasts, sounds };
+  return { toasts, rewards: toasts.map((_, i) => rewards[i] === true), sounds };
 }

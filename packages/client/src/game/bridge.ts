@@ -17,7 +17,7 @@ export interface BattleBarState {
 
 export interface UiHooks {
   hint(text: string): void;
-  toast(text: string, kind?: "info" | "error"): void;
+  toast(text: string, kind?: "info" | "error" | "reward"): void;
   openHero(): void;
   openCastle(): void;
   openSpellbook(ab: ActiveBattle, side: Seat, onPick: (spell: SpellId) => void): void;
@@ -48,7 +48,7 @@ class Bridge {
     this.ui?.hint(text);
   }
 
-  toast(text: string, kind: "info" | "error" = "info"): void {
+  toast(text: string, kind: "info" | "error" | "reward" = "info"): void {
     this.ui?.toast(text, kind);
   }
 

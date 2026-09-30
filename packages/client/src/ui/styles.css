@@ -108,14 +108,19 @@ button, input { font: inherit; color: inherit; }
 .stage { position: relative; flex: 1 1 auto; min-height: 0; background: #0b0c10; overflow: hidden; }
 .game { position: absolute; inset: 0; overflow: hidden; touch-action: none; }
 .game canvas { display: block; touch-action: none; }
+/* atmosphere over the map and the battle (DOM, so it costs the canvas nothing): a vignette and drifting ash */
+.game-fx { position: absolute; inset: 0; pointer-events: none; overflow: hidden; background: radial-gradient(ellipse at 50% 45%, rgba(0, 0, 0, 0) 55%, rgba(8, 6, 4, 0.55) 100%); }
+.game-fx i { position: absolute; top: -12px; left: var(--x); width: var(--s); height: var(--s); border-radius: 50%; background: rgba(214, 200, 176, 0.55); filter: blur(0.6px); opacity: 0; animation: ash var(--d) linear var(--delay) infinite; }
+@keyframes ash { 0% { transform: translate(0, 0); opacity: 0; } 12% { opacity: 0.7; } 85% { opacity: 0.5; } 100% { transform: translate(-90px, 105vh) rotate(160deg); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .game-fx i { display: none; } }
 .screen {
   position: absolute;
   inset: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   background:
-    linear-gradient(rgba(10, 11, 12, 0.25), rgba(10, 11, 12, 0.55) 40%, rgba(10, 11, 12, 0.85)),
-    #0e0f11 url(/art/menu-bg-tall.webp) center top / cover no-repeat;
+    linear-gradient(rgba(10, 11, 12, 0.05), rgba(10, 11, 12, 0.2) 30%, rgba(10, 11, 12, 0.8) 55%, rgba(10, 11, 12, 0.92)),
+    #0e0f11 url(/art/menu-bg-tall.webp) center top / 100% auto no-repeat;
   padding: 18px 16px calc(24px + var(--safe-bottom));
 }
 .screen:empty { display: none; }
@@ -137,6 +142,15 @@ button, input { font: inherit; color: inherit; }
   filter: drop-shadow(0 2px 0 #000) drop-shadow(0 0 10px rgba(0, 0, 0, 0.8));
 }
 .screen .sub { color: #efe3c4; font-size: 15px; margin: 0; text-align: center; text-shadow: 0 1px 2px #000, 0 0 8px #000; }
+/* lobby / login poster: the key art stays visible at the top, crest and title sit low over it */
+.poster { position: relative; min-height: min(46vh, 380px); display: grid; align-items: end; margin: -18px -16px 0; padding: 0 16px 4px; overflow: hidden; }
+.poster-title { position: relative; display: grid; gap: 8px; animation: poster-in 0.9s ease-out both; }
+.poster .crest { width: 150px; }
+.embers { position: absolute; inset: 0; pointer-events: none; }
+.embers i { position: absolute; left: var(--x); bottom: -10px; width: var(--s); height: var(--s); border-radius: 50%; background: #ffb347; box-shadow: 0 0 6px 2px rgba(255, 150, 50, 0.7); opacity: 0; animation: ember var(--d) linear var(--delay) infinite; }
+@keyframes ember { 0% { transform: translate(0, 0); opacity: 0; } 10% { opacity: 0.9; } 70% { opacity: 0.6; } 100% { transform: translate(40px, -340px); opacity: 0; } }
+@keyframes poster-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .embers { display: none; } .poster-title { animation: none; } }
 .crest { width: 190px; max-width: 60%; height: auto; margin: 0 auto; display: block; filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.75)); }
 .card {
   position: relative;
@@ -275,6 +289,30 @@ input.field:focus { outline: 2px solid var(--gold); outline-offset: 0; }
 .overlay.center { align-items: center; padding-bottom: 10px; }
 @keyframes rise { from { transform: translateY(24px); opacity: 0.3; } to { transform: none; opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .panel { animation: none; } }
+/* victory / defeat presentation */
+.panel.result-panel { max-width: 440px; overflow: hidden; }
+.panel.result-panel .panel-head { display: none; }
+.panel.result-panel .panel-body { padding: 0; }
+.result { position: relative; display: grid; justify-items: center; gap: 10px; padding: 0 16px 18px; text-align: center; }
+.result-art { position: relative; width: calc(100% + 32px); height: 190px; margin: 0 -16px -70px; overflow: hidden; }
+.result-art img { width: 100%; height: 100%; object-fit: cover; animation: result-zoom 6s ease-out both; -webkit-mask-image: linear-gradient(#000 45%, transparent); mask-image: linear-gradient(#000 45%, transparent); }
+.lost .result-art img { filter: saturate(0.55) brightness(0.8); }
+.result-crest { position: relative; width: 96px; animation: result-crest 0.7s cubic-bezier(0.2, 1.4, 0.4, 1) 0.15s both; }
+.result-crest img { width: 100%; filter: drop-shadow(0 6px 12px #000); }
+.lost .result-crest img { filter: grayscale(0.8) brightness(0.75) drop-shadow(0 6px 12px #000); }
+.result-title { position: relative; margin: 0; font: 700 38px/1 var(--display); letter-spacing: 0.08em; text-transform: uppercase; animation: result-title 0.6s ease-out 0.35s both; }
+.won .result-title { background: linear-gradient(#fff4c8, #f0c060 55%, #9a6a1c); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 14px rgba(255, 200, 90, 0.55)) drop-shadow(0 2px 1px #000); }
+.lost .result-title { color: #c9463a; text-shadow: 0 0 18px rgba(200, 50, 40, 0.5), 0 2px 1px #000; }
+.result-text { margin: 0; color: #d3c9b0; font-size: 14px; }
+.result-stats { width: 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); gap: 6px; }
+.result-stat { display: grid; gap: 1px; padding: 7px 4px; border-radius: 8px; border: 1px solid rgba(168, 130, 58, 0.55); background: rgba(0, 0, 0, 0.45); animation: result-title 0.4s ease-out 0.55s both; }
+.result-stat b { font: 600 19px var(--display); color: #fff3cf; font-variant-numeric: tabular-nums; }
+.result-stat span { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.result-actions { width: 100%; display: grid; gap: 8px; margin-top: 4px; }
+@keyframes result-zoom { from { transform: scale(1.12); } to { transform: scale(1); } }
+@keyframes result-crest { from { transform: scale(0.4) translateY(20px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes result-title { from { transform: translateY(10px); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .result-art img, .result-crest, .result-title, .result-stat { animation: none; } }
 .panel-head { display: flex; align-items: center; gap: 8px; padding: 12px 12px 8px 14px; border-bottom: 1px solid rgba(156, 122, 50, 0.6); }
 .panel-head h2 { font-family: var(--display); font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; color: var(--gold-2); text-shadow: 0 1px 0 #000; margin: 0; font-size: 21px; flex: 1; min-width: 0; line-height: 1.1; }
 .panel-body { padding: 12px 14px 16px; overflow-y: auto; display: grid; gap: 10px; -webkit-overflow-scrolling: touch; }
@@ -405,19 +443,23 @@ details.help ul { margin: 6px 0 0; padding-left: 18px; color: var(--muted); font
 /* while a panel is open its title and close button sit at the top: toasts move to the bottom */
 .toasts.low { top: auto; bottom: 12px; }
 .toast {
-  background: rgba(0, 0, 0, 0.86);
-  border: 1px solid var(--gold);
-  color: var(--text);
-  padding: 7px 12px;
-  border-radius: 9px;
-  font-size: 13px;
-  max-width: 100%;
-  text-align: center;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
-  animation: toast-in 0.2s ease-out;
+  display: flex; align-items: center; gap: 9px; max-width: 100%; padding: 7px 12px 7px 8px;
+  background: linear-gradient(90deg, rgba(217, 169, 70, 0.14), rgba(0, 0, 0, 0) 40%), rgba(8, 9, 11, 0.92);
+  border: 1px solid rgba(168, 130, 58, 0.7); border-left: 3px solid var(--gold); border-radius: 8px;
+  color: var(--text); font-size: 13px; line-height: 1.3; text-align: left;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6);
+  animation: toast-in 0.22s ease-out;
 }
-.toast.error { border-color: var(--bad); color: #ffd9d3; }
-.toast.hide { opacity: 0; transition: opacity 0.3s; }
+.toast-ico {
+  flex: none; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center;
+  font: 700 12px var(--display); color: #1b1307; background: var(--gold);
+}
+.toast.error { border-color: rgba(224, 98, 90, 0.7); border-left-color: var(--bad); color: #ffd9d3; background: linear-gradient(90deg, rgba(224, 98, 90, 0.18), rgba(0, 0, 0, 0) 40%), rgba(12, 7, 7, 0.94); }
+.toast.error .toast-ico { background: var(--bad); color: #fff; }
+.toast.reward { border-color: rgba(240, 211, 138, 0.9); border-left-color: var(--gold-2); box-shadow: 0 0 18px rgba(240, 190, 90, 0.35), 0 6px 18px rgba(0, 0, 0, 0.6); animation: toast-in 0.22s ease-out, toast-glow 1.6s ease-in-out 0.2s 2; }
+.toast.reward .toast-ico { background: radial-gradient(circle, #fff3c4, var(--gold)); box-shadow: 0 0 10px rgba(255, 220, 120, 0.8); }
+.toast.hide { opacity: 0; transform: translateY(-4px); transition: opacity 0.3s, transform 0.3s; }
+@keyframes toast-glow { 50% { box-shadow: 0 0 28px rgba(255, 210, 110, 0.6), 0 6px 18px rgba(0, 0, 0, 0.6); } }
 @keyframes toast-in { from { transform: translateY(-8px); opacity: 0; } to { transform: none; opacity: 1; } }
 
 /* ---------- Seasonal Wasteland ---------- */

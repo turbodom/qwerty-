@@ -26,13 +26,37 @@
       onload="window.__piSdkState = 'loaded'"
       onerror="window.__piSdkState = 'failed'"
     ></script>
+    <style>
+      /* loading splash: inline so it shows before the bundle; removed by src/ui/splash.ts once the art is ready */
+      .splash { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: end center; background: #0b0c10 url(/art/menu-bg-tall.webp) center / cover no-repeat; color: #ebe2cb; font-family: "Alegreya Sans", system-ui, sans-serif; transition: opacity 0.5s ease; }
+      .splash::before { content: ""; position: absolute; inset: 0; background: linear-gradient(rgba(6, 7, 8, 0.1), rgba(6, 7, 8, 0.35) 45%, rgba(6, 7, 8, 0.92)); }
+      .splash.out { opacity: 0; pointer-events: none; }
+      .splash-in { position: relative; width: min(420px, 100%); padding: 0 24px calc(40px + env(safe-area-inset-bottom, 0px)); display: grid; justify-items: center; gap: 12px; text-align: center; }
+      .splash-logo { width: 150px; height: auto; filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.8)); }
+      .splash h1 { margin: 0; font: 700 34px/1 "Oswald", "Arial Narrow", sans-serif; letter-spacing: 0.06em; text-transform: uppercase; background: linear-gradient(#fff1c2, #d9a946 60%, #8a6320); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 2px 2px #000); }
+      .splash-bar { width: 100%; height: 6px; border-radius: 3px; background: rgba(0, 0, 0, 0.6); border: 1px solid #a8823a; overflow: hidden; }
+      .splash-bar i { display: block; height: 100%; width: 6%; background: linear-gradient(90deg, #8a6320, #f0d38a); box-shadow: 0 0 10px rgba(240, 200, 100, 0.8); transition: width 0.3s ease; }
+      .splash-tip { min-height: 2.8em; font-size: 14px; color: #cfc4a8; text-shadow: 0 1px 2px #000; transition: opacity 0.4s; }
+      .splash-status { font: 500 11px "Oswald", sans-serif; letter-spacing: 0.12em; text-transform: uppercase; color: #a39a86; }
+      @media (prefers-reduced-motion: reduce) { .splash, .splash-bar i, .splash-tip { transition: none; } }
+    </style>
   </head>
   <body>
+    <div id="splash" class="splash" role="status" aria-live="polite">
+      <div class="splash-in">
+        <img class="splash-logo" src="/art/logo.webp" alt="" />
+        <h1>Короны Пустоши</h1>
+        <div class="splash-bar"><i id="splash-bar"></i></div>
+        <div class="splash-status" id="splash-status">Загрузка мира</div>
+        <div class="splash-tip" id="splash-tip">Пустошь не прощает ошибок. Берегите армию.</div>
+      </div>
+    </div>
     <div id="app" class="app">
       <header id="topbar" class="topbar"></header>
       <div id="hint" class="hint" role="status" aria-live="polite" hidden></div>
       <main id="stage" class="stage">
         <div id="game" class="game" aria-label="Игровое поле"></div>
+        <div id="game-fx" class="game-fx" aria-hidden="true"></div>
         <div id="screen" class="screen"></div>
         <div id="overlay" class="overlay" hidden></div>
         <div id="toasts" class="toasts" aria-live="polite"></div>

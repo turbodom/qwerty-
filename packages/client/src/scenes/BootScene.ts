@@ -17,6 +17,7 @@ import {
 import { BANNER_COLORS } from "../gfx/draw";
 import type { TerrainChar } from "../gfx/draw";
 import { bridge } from "../game/bridge";
+import { setSplashProgress } from "../ui/splash";
 
 const PIC_PREFIX = "pic:";
 
@@ -36,6 +37,7 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload(): void {
+    this.load.on("progress", (v: number) => setSplashProgress(v * 0.9));
     const names = [...SCENE_ART, ...UNIT_IDS.map(unitArtName), ...ARTIFACT_IDS.map((id) => `art-${id}`)];
     for (const n of names) this.load.image(PIC_PREFIX + n, artUrl(n));
     // painted map landscapes go straight to Phaser: MapScene draws them under the objects
