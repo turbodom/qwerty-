@@ -117,12 +117,12 @@ export function bakeHex(kind: "base" | "reach" | "attack" | "active" | "select",
       return;
     }
     hexPath(ctx, 0, 0, r - 2);
-    const fill = kind === "reach" ? "rgba(217,169,70,.28)" : kind === "attack" ? "rgba(224,98,90,.30)" : "rgba(0,0,0,.07)";
-    const stroke = kind === "reach" ? "rgba(240,211,138,.7)" : kind === "attack" ? "rgba(255,138,122,.8)" : "rgba(0,0,0,.22)";
+    const fill = kind === "reach" ? "rgba(217,169,70,.28)" : kind === "attack" ? "rgba(224,98,90,.30)" : "rgba(0,0,0,.10)";
+    const stroke = kind === "reach" ? "rgba(240,211,138,.7)" : kind === "attack" ? "rgba(255,138,122,.8)" : "rgba(235,226,203,.16)";
     ctx.fillStyle = fill;
     ctx.fill();
     ctx.strokeStyle = stroke;
-    ctx.lineWidth = 1.8;
+    ctx.lineWidth = kind === "base" ? 1.2 : 1.8;
     ctx.stroke();
   });
 }
