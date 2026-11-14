@@ -20,7 +20,7 @@ function explored(state: GameState, ex: string, x: number, y: number): boolean {
 /**
  * What `player` is allowed to see. Returns a deep copy; the source state is not modified.
  * Hidden: objects and foreign heroes on unexplored tiles, exact foreign army sizes
- * (replaced with `countHint`), opponent gold/bag/exploration/growth/quests/skill choices,
+ * (replaced with `countHint`), opponent gold/resources/bag/exploration/growth/quests/skill choices,
  * battles the player is not part of, and every rng state (set to 0).
  */
 export function playerView(state: GameState, player: PlayerId): PlayerView {
@@ -37,6 +37,7 @@ export function playerView(state: GameState, player: PlayerId): PlayerView {
       : {
           ...p,
           gold: 0,
+          res: {},
           explored: "0".repeat(state.cols * state.rows),
           growth: {},
           quests: {},

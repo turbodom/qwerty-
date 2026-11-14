@@ -1,9 +1,10 @@
-import { BUILDINGS, FACTION_UNITS, UNITS, heroCastle } from "@korony/shared";
+import { BUILDINGS, FACTION_UNITS, HERO_COST, MAX_HEROES, RESOURCE_IDS, UNITS, heroCastle, playerHeroIds } from "@korony/shared";
+import type { BuildingId } from "@korony/shared";
 import type { UnitId } from "@korony/shared";
 import { buildingIconUrl, cityStage, cityUrl } from "../../gfx/artUrls";
 import { unitIconUrl } from "../../gfx/bake";
 import {
-  buildReason, factionBuildings, hireInfo, mePlayer, myHero, ownerColor, upgradeInfo,
+  buildReason, factionBuildings, hireHeroReason, hireInfo, mePlayer, myHero, ownerColor, upgradeInfo,
 } from "../../game/helpers";
 import type { Reason } from "../../game/helpers";
 import { fmtNum, t } from "../../i18n";
@@ -14,6 +15,15 @@ import type { AppApi, PanelSpec } from "./types";
 
 function reasonText(r: Reason | null): string {
   return r ? t(r.key, r.params) : "";
+}
+
+/** "2 500 gold" or "2 500 gold + 10 metal, 5 crystals". */
+function costText(id: BuildingId): string {
+  const b = BUILDINGS[id];
+  const res = RESOURCE_IDS.filter((r) => (b.res?.[r] ?? 0) > 0)
+    .map((r) => `${b.res?.[r] ?? 0} ${t(r === "metal" ? "res.metalShort" : "res.crystalShort")}`)
+    .join(", ");
+  return res ? t("castle.costRes", { gold: fmtNum(b.cost), res }) : t("castle.cost", { gold: fmtNum(b.cost) });
 }
 
 /** Castle: hire, one building a day, forge upgrades. Every button is a GameAction; disabled ones say why. */
@@ -106,7 +116,6 @@ export function castlePanel(app: AppApi): PanelSpec {
   // buildings
   body.append(h("div", { class: "section-title" }, t("castle.buildings")));
   for (const id of factionBuildings(view)) {
-    const b = BUILDINGS[id];
     const has = !!me.built[id];
     const reason = has ? null : buildReason(view, id);
     body.append(
@@ -128,8 +137,27 @@ export function castlePanel(app: AppApi): PanelSpec {
             disabled: has || !!reason,
             onClick: () => void app.act({ type: "build", building: id }),
           },
-          has ? t("castle.have") : t("common.gold", { amount: fmtNum(b.cost) }),
+          has ? t("castle.have") : costText(id),
         ),
+      ),
+    );
+  }
+
+  // tavern: a second hero
+  if (me.built.tavern) {
+    const heroReason = hireHeroReason(view);
+    body.append(
+      h("div", { class: "section-title" }, t("castle.tavern")),
+      h(
+        "div",
+        { class: "fx" },
+        t("castle.heroCount", { n: playerHeroIds(me).length, max: MAX_HEROES }),
+        heroReason ? h("div", { class: "reason" }, reasonText(heroReason)) : null,
+      ),
+      h(
+        "button",
+        { class: "btn block", testid: "hire-hero", disabled: !!heroReason, onClick: () => void app.act({ type: "hireHero" }) },
+        t("castle.hireHero", { cost: fmtNum(HERO_COST) }),
       ),
     );
   }

@@ -1,6 +1,7 @@
 import type { GameState, Hero, MapObject, PlayerId, PlayerState, Point } from "./types";
 import { isPassable } from "./maps";
-import { CASTLE_INCOME, MINE_INCOME } from "./data/rules";
+import { CASTLE_INCOME, CITADEL_INCOME, MINE_INCOME, MINE_YIELD, RESOURCE_IDS, WAREHOUSE_YIELD } from "./data/rules";
+import type { ResourceId } from "./data/rules";
 
 /** Reveal radii (in tiles, Euclidean + 0.5 as in the prototype). */
 export const REVEAL_HERO = 4;
@@ -16,6 +17,16 @@ export function terrainOk(state: GameState, x: number, y: number): boolean {
 
 export function getPlayer(state: GameState, playerId: PlayerId): PlayerState | undefined {
   return state.players.find((p) => p.id === playerId);
+}
+
+/** Ids of every hero of the player (saves from before the tavern only have heroId). */
+export function playerHeroIds(p: PlayerState): string[] {
+  return p.heroIds && p.heroIds.length > 0 ? p.heroIds : [p.heroId];
+}
+
+/** The player's heroes (alive or not), the active one included. */
+export function heroesOf(state: GameState, p: PlayerState): Hero[] {
+  return playerHeroIds(p).map((id) => state.heroes[id]).filter((h): h is Hero => !!h);
 }
 
 /** First non-gone object on the tile. */
@@ -134,8 +145,7 @@ export function revealSources(state: GameState, playerId: PlayerId): [number, nu
   const pts: [number, number, number][] = [];
   const p = getPlayer(state, playerId);
   if (!p) return pts;
-  const hero = state.heroes[p.heroId];
-  if (hero && hero.alive) pts.push([hero.x, hero.y, REVEAL_HERO]);
+  for (const hero of heroesOf(state, p)) if (hero.alive) pts.push([hero.x, hero.y, REVEAL_HERO]);
   for (const o of state.objects) {
     if (o.gone || o.owner !== playerId) continue;
     if (o.kind === "castle") pts.push([o.x, o.y, REVEAL_CASTLE]);
@@ -165,13 +175,33 @@ export function ownedCastles(state: GameState, playerId: PlayerId): MapObject[] 
   return state.objects.filter((o) => o.kind === "castle" && !o.gone && o.owner === playerId);
 }
 
-/** Daily income: 1000 per owned castle + 500 per owned mine. */
+/** Daily income: 1000 per owned castle + 500 per owned gold mine (+ the citadel's bonus). */
 export function income(state: GameState, playerId: PlayerId): number {
   let g = 0;
   for (const o of state.objects) {
     if (o.gone || o.owner !== playerId) continue;
     if (o.kind === "castle") g += CASTLE_INCOME;
-    else if (o.kind === "mine") g += MINE_INCOME;
+    else if (o.kind === "mine" && !o.res) g += MINE_INCOME;
   }
+  const p = getPlayer(state, playerId);
+  if (p?.built.citadel && ownedCastles(state, playerId).length > 0) g += CITADEL_INCOME;
   return g;
+}
+
+/** Daily metal and crystals: metal/crystal mines plus the warehouse. */
+export function resourceIncome(state: GameState, playerId: PlayerId): Record<ResourceId, number> {
+  const out: Record<ResourceId, number> = { metal: 0, crystal: 0 };
+  for (const o of state.objects) {
+    if (o.kind === "mine" && o.res && !o.gone && o.owner === playerId) out[o.res] += MINE_YIELD[o.res];
+  }
+  const p = getPlayer(state, playerId);
+  if (p?.built.warehouse && ownedCastles(state, playerId).length > 0) {
+    for (const r of RESOURCE_IDS) out[r] += WAREHOUSE_YIELD[r];
+  }
+  return out;
+}
+
+/** The player's stock of a resource (0 when unknown). */
+export function resourceOf(p: PlayerState, r: ResourceId): number {
+  return p.res?.[r] ?? 0;
 }

@@ -8,6 +8,7 @@ import { MAPS, SEAT_DEFAULTS } from "./maps";
 import { createRng } from "./rng";
 import type { Rng } from "./rng";
 import type { ArmyStack, Point } from "./types";
+import type { ResourceId } from "./data/rules";
 
 // Procedural adventure maps. A map id "random-<size>" makes createGame build a fresh map from the game
 // seed, so every match has a different layout. Maps are point-symmetric (rotated 180 degrees around the
@@ -327,12 +328,17 @@ export function generateMap(seed: number, size: MapSize): MapDef {
   const centreGuard = { x: centre.x - 1, y: centre.y + 1 };
   add({ kind: "monster", x: centreGuard.x, y: centreGuard.y, army: monsterArmy(rng, 3, startPower * (ZONE_POWER[3]?.[0] ?? 5)) });
 
-  // Mines: one near home, more in the middle ground.
-  const mines: [number, number][] = [[0.1, 0.22], ...Array.from({ length: 1 + Math.round(scale) }, (): [number, number] => [0.22, 0.46])];
-  for (const [lo, hi] of mines) {
+  // Mines: gold and metal near home, crystals and more of everything in the middle ground.
+  const midKinds: (ResourceId | undefined)[] = ["crystal", undefined, "metal", "crystal", undefined];
+  const mines: [number, number, ResourceId | undefined][] = [
+    [0.1, 0.22, undefined],
+    [0.1, 0.24, "metal"],
+    ...Array.from({ length: 1 + Math.round(scale) }, (_, i): [number, number, ResourceId | undefined] => [0.22, 0.46, midKinds[i % midKinds.length]]),
+  ];
+  for (const [lo, hi, res] of mines) {
     const p = spot(lo, hi, 3);
     if (!p) continue;
-    add({ kind: "mine", x: p.x, y: p.y });
+    add(res ? { kind: "mine", x: p.x, y: p.y, res } : { kind: "mine", x: p.x, y: p.y });
     guard(p, zoneOf(zoneT(p)));
   }
 

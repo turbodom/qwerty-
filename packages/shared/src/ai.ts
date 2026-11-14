@@ -6,8 +6,8 @@ import { UNITS, UPGRADES } from "./data/units";
 import type { BuildingId } from "./data/buildings";
 import { BUILDINGS } from "./data/buildings";
 import { BUILDING_GROWTH, FACTION_UNITS, HIRE_REQUIRES, isNewWeek } from "./data/growth";
-import { MAX_ARMY_STACKS } from "./data/rules";
-import { findPath, getPlayer, guardOf, ownedCastles, terrainOk } from "./map";
+import { HERO_COST, MAX_ARMY_STACKS, MAX_HEROES, RESOURCE_IDS } from "./data/rules";
+import { findPath, getPlayer, guardOf, heroesOf, ownedCastles, playerHeroIds, resourceOf, terrainOk } from "./map";
 import { heroPower, maxMovement, mergeArmy } from "./hero";
 
 // Port of the prototype's aiTurn / aiRecruit. Pure planning lives here; game.ts executes the plan.
@@ -52,9 +52,9 @@ function heroOfPlayer(state: GameState, p: PlayerState | undefined): Hero | unde
  * Returns the full path (not cut to the hero's movement points), or [] when nothing is worth it.
  * The AI plans with full knowledge of the map, as in the prototype.
  */
-export function planAiMove(state: GameState, playerId: PlayerId): Point[] {
+export function planAiMove(state: GameState, playerId: PlayerId, heroId?: string): Point[] {
   const p = getPlayer(state, playerId);
-  const h = heroOfPlayer(state, p);
+  const h = heroId === undefined ? heroOfPlayer(state, p) : state.heroes[heroId];
   if (!p || !h || !h.alive) return [];
   const myP = heroPower(h.army, h);
   const best: { path: Point[]; score: number } = { path: [], score: -Infinity };
@@ -76,9 +76,10 @@ export function planAiMove(state: GameState, playerId: PlayerId): Point[] {
   const threats: { dist: number[]; reach: number }[] = [];
   for (const q of state.players) {
     if (q.id === p.id || q.defeated) continue;
-    const e = heroOfPlayer(state, q);
-    if (e && e.alive && heroPower(e.army, e) > myP * AI_DANGER_MARGIN) {
-      threats.push({ dist: terrainDistances(state, e, maxMovement(e)), reach: maxMovement(e) });
+    for (const e of heroesOf(state, q)) {
+      if (e.alive && heroPower(e.army, e) > myP * AI_DANGER_MARGIN) {
+        threats.push({ dist: terrainDistances(state, e, maxMovement(e)), reach: maxMovement(e) });
+      }
     }
   }
   const unsafe = (x: number, y: number): boolean => {
@@ -125,8 +126,9 @@ export function planAiMove(state: GameState, playerId: PlayerId): Point[] {
   if (state.day >= AI_HERO_DAY) {
     for (const q of state.players) {
       if (q.id === p.id || q.defeated) continue;
-      const e = heroOfPlayer(state, q);
-      if (e && e.alive && myP > heroPower(e.army, e) * AI_HERO_MARGIN) consider(e.x, e.y, AI_VALUE.hero);
+      for (const e of heroesOf(state, q)) {
+        if (e.alive && myP > heroPower(e.army, e) * AI_HERO_MARGIN) consider(e.x, e.y, AI_VALUE.hero);
+      }
     }
   }
   return best.path;
@@ -200,7 +202,7 @@ export function aiRecruit(state: GameState, playerId: PlayerId): { unit: UnitId;
 }
 
 /** Buildings the AI wants, most useful first. */
-const AI_BUILD_ORDER: readonly BuildingId[] = ["griffinTower", "forge", "mageGuild"];
+const AI_BUILD_ORDER: readonly BuildingId[] = ["griffinTower", "forge", "tavern", "mageGuild", "warehouse", "fort", "citadel"];
 
 /**
  * Builds the first missing building of AI_BUILD_ORDER the faction can use, when the gold allows it and
@@ -216,9 +218,18 @@ export function aiBuild(state: GameState, playerId: PlayerId): { building: Build
     if (p.built[id]) continue;
     const grows = Object.keys(BUILDING_GROWTH[id] ?? {}) as UnitId[];
     if (!grows.every((u) => units.includes(u))) continue;
-    const cost = BUILDINGS[id].cost;
+    const def = BUILDINGS[id];
+    if (def.requires && !p.built[def.requires]) continue;
+    // a building waiting for metal or crystals does not hold up the rest of the list
+    if (!RESOURCE_IDS.every((r) => resourceOf(p, r) >= (def.res?.[r] ?? 0))) continue;
+    const cost = def.cost;
     if (p.gold < cost + AI_BUILD_RESERVE) return null;
     p.gold -= cost;
+    if (def.res) {
+      const res = { ...(p.res ?? {}) };
+      for (const r of RESOURCE_IDS) res[r] = (res[r] ?? 0) - (def.res[r] ?? 0);
+      p.res = res;
+    }
     p.built[id] = true;
     p.builtToday = true;
     for (const [unit, n] of Object.entries(BUILDING_GROWTH[id] ?? {}) as [UnitId, number][]) {
@@ -227,6 +238,18 @@ export function aiBuild(state: GameState, playerId: PlayerId): { building: Build
     return { building: id, gold: cost };
   }
   return null;
+}
+
+/**
+ * The castle where the AI would hire another hero today (it has a tavern, room for a hero and gold to
+ * spare), or null. The caller places and pays for the hero.
+ */
+export function aiWantsHero(state: GameState, playerId: PlayerId): MapObject | null {
+  const p = getPlayer(state, playerId);
+  if (!p || p.defeated || p.faction === "neutral" || !p.built.tavern) return null;
+  if (playerHeroIds(p).length >= MAX_HEROES || p.gold < HERO_COST + AI_BUILD_RESERVE * 2) return null;
+  const castles = ownedCastles(state, p.id);
+  return castles.find((o) => o.id === p.castleId) ?? castles[0] ?? null;
 }
 
 /** With a forge, upgrades the hero's stacks with the gold left after hiring (strongest tier first). Returns gold spent. */

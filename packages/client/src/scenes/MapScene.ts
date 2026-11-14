@@ -459,6 +459,16 @@ export class MapScene extends Phaser.Scene {
     const me = mePlayer(view);
     if (!hero || !me) return;
 
+    // another own hero: make it the active one
+    const other = Object.values(s.heroes).find((h) => h.alive && h.owner === view.you && h.id !== hero.id && h.x === x && h.y === y);
+    if (other) {
+      this.clearPath();
+      void bridge.act({ type: "selectHero", hero: other.id }).then((res) => {
+        if (res.ok) bridge.hint(t("hint.heroSelected", { name: other.name }));
+      });
+      return;
+    }
+
     // own hero / own castle open their panels
     if (hero.alive && hero.x === x && hero.y === y) {
       const o = objectAtView(s, x, y);

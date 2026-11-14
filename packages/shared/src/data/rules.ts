@@ -26,3 +26,26 @@ export const REVIVE_ARMY: Record<"castle" | "necropolis", { unit: "pike" | "skel
   castle: { unit: "pike", count: 8 },
   necropolis: { unit: "skeleton", count: 10 },
 };
+
+/** Resources besides gold: metal (for buildings) and crystals (for the strongest buildings). */
+export type ResourceId = "metal" | "crystal";
+export const RESOURCE_IDS: readonly ResourceId[] = ["metal", "crystal"];
+export const RESOURCE_NAMES: Record<ResourceId, string> = { metal: "металл", crystal: "кристаллы" };
+/** Resources each player starts with. */
+export const START_RESOURCES: Record<ResourceId, number> = { metal: 5, crystal: 2 };
+/** Daily yield of a metal or crystal mine (a gold mine gives MINE_INCOME gold). */
+export const MINE_YIELD: Record<ResourceId, number> = { metal: 2, crystal: 1 };
+/** Player-facing yield of a mine, as in "Рудник ваш: +2 металла в день". */
+export const MINE_YIELD_TEXT: Record<ResourceId, string> = { metal: "+2 металла", crystal: "+1 кристалл" };
+/** Daily resources from the warehouse building. */
+export const WAREHOUSE_YIELD: Record<ResourceId, number> = { metal: 2, crystal: 1 };
+/** Extra daily gold from the citadel building. */
+export const CITADEL_INCOME = 500;
+/** Gold for a new hero in the tavern; a player leads at most MAX_HEROES heroes. */
+export const HERO_COST = 2500;
+export const MAX_HEROES = 2;
+/** Names of the heroes the tavern offers, per faction. */
+export const HERO_NAMES: Record<"castle" | "necropolis", readonly string[]> = {
+  castle: ["Ратибор", "Велена", "Ярослав"],
+  necropolis: ["Сайрус", "Нера", "Кадавр"],
+};
