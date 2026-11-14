@@ -1,5 +1,6 @@
 import {
-  BUILDINGS, FACTION_UNITS, HIRE_REQUIRES, MAX_ARMY_STACKS, UNITS, UPGRADES, buildingAvailable, heroCastle,
+  BUILDINGS, FACTION_UNITS, HERO_COST, HIRE_REQUIRES, MAX_ARMY_STACKS, MAX_HEROES, UNITS, UPGRADES, buildingAvailable,
+  canPayResources, heroCastle, playerHeroIds,
 } from "@korony/shared";
 import type {
   ActiveBattle, BuildingId, GameState, Hero, MapObject, PlayerId, PlayerState, PlayerView, Seat, UnitId,
@@ -117,8 +118,33 @@ export function buildReason(view: PlayerView, id: BuildingId): Reason | null {
   if (!me) return { key: "reason.gameOver" };
   if (me.built[id]) return { key: "reason.alreadyBuilt" };
   if (me.builtToday) return { key: "reason.builtToday" };
+  const req = BUILDINGS[id].requires;
+  if (req && !me.built[req]) return { key: "reason.needsBuilding", params: { name: buildingName(req) } };
   if (me.gold < BUILDINGS[id].cost) return { key: "reason.noGold" };
+  if (!canPayResources(me, BUILDINGS[id].res)) return { key: "reason.noResources" };
   return null;
+}
+
+/** Why a hero cannot be hired in the tavern right now, or null. */
+export function hireHeroReason(view: PlayerView): Reason | null {
+  const me = mePlayer(view);
+  const guard = castleReason(view);
+  if (guard) return guard;
+  if (!me) return { key: "reason.gameOver" };
+  if (!me.built.tavern) return { key: "reason.needsBuilding", params: { name: buildingName("tavern") } };
+  if (playerHeroIds(me).length >= MAX_HEROES) return { key: "reason.maxHeroes", params: { n: MAX_HEROES } };
+  if (me.gold < HERO_COST) return { key: "reason.noGold" };
+  return null;
+}
+
+/** The viewer's living heroes other than the active one. */
+export function otherHeroes(view: PlayerView): Hero[] {
+  const me = mePlayer(view);
+  if (!me) return [];
+  return playerHeroIds(me)
+    .filter((id) => id !== me.heroId)
+    .map((id) => view.state.heroes[id])
+    .filter((h): h is Hero => !!h && h.alive);
 }
 
 export interface UpgradeInfo {

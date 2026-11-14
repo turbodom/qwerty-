@@ -18,7 +18,14 @@ export const artifactIconUrl = (id: ArtifactId): string => artUrl(`art-${id}`);
 export const unitPicUrl = (unit: UnitId): string => artUrl(unitArtName(unit));
 export const skillIconUrl = (id: SkillId): string => artUrl(`skill-${id}`);
 export const spellIconUrl = (id: SpellId): string => artUrl(`spell-${id}`);
-export const buildingIconUrl = (id: BuildingId): string => artUrl(`bld-${id}`);
+/** Buildings without their own painting yet reuse a fitting picture (see docs/MISSING_PRODUCTION_ASSETS.md). */
+const BUILDING_ART_FALLBACK: Partial<Record<BuildingId, string>> = {
+  tavern: "portrait-player",
+  warehouse: "shop-treasury",
+  fort: "base-player",
+  citadel: "city-player-3",
+};
+export const buildingIconUrl = (id: BuildingId): string => artUrl(BUILDING_ART_FALLBACK[id] ?? `bld-${id}`);
 
 /** Hero figure detail level from the number of worn items: 0 light gear, 1 armoured, 2 fully kitted. */
 export function gearTier(worn: number): 0 | 1 | 2 {

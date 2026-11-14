@@ -5,6 +5,7 @@ import type { SkillId } from "./data/skills";
 import type { SpellId } from "./data/spells";
 import type { StatKey } from "./data/stats";
 import type { Faction, UnitId } from "./data/units";
+import type { ResourceId } from "./data/rules";
 
 // ================= map / game state =================
 
@@ -48,6 +49,8 @@ export interface MapObject {
   artifact?: ArtifactId;
   army?: ArmyStack[];
   garrison?: ArmyStack[];
+  /** Mines only: what the mine yields (gold when absent). */
+  res?: ResourceId;
 }
 
 export interface PlayerState {
@@ -57,7 +60,12 @@ export interface PlayerState {
   isAI: boolean;
   faction: Faction;
   gold: number;
+  /** Metal and crystals (absent in saves from before resources: counts as none). */
+  res?: Partial<Record<ResourceId, number>>;
+  /** The hero the player is moving right now (hire, build and the hero screen act on it). */
   heroId: string;
+  /** Every hero of the player, heroId included (absent in old saves: just heroId). */
+  heroIds?: string[];
   castleId: string;
   /** cols*rows string of "0"/"1", row-major. */
   explored: string;
@@ -107,7 +115,11 @@ export type GameAction =
   | { type: "unequip"; slot: SlotId }
   | { type: "chooseSkill"; index: 0 | 1 }
   | { type: "battle"; action: BattleAction }
-  | { type: "autoBattle" };
+  | { type: "autoBattle" }
+  /** Tavern: a new hero next to the castle. */
+  | { type: "hireHero" }
+  /** Makes another own hero the active one. */
+  | { type: "selectHero"; hero: string };
 
 export type GameEvent =
   | { type: "moved"; heroId: string; path: Point[] }

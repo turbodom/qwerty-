@@ -28,6 +28,10 @@ const EN_BUILDINGS: Record<BuildingId, { name: string; desc: string }> = {
   griffinTower: { name: "Griffin Tower", desc: "unlocks griffins, 3 a week" },
   mageGuild: { name: "Mage Guild", desc: "unlocks Heal and Haste" },
   forge: { name: "Forge", desc: "lets you upgrade units" },
+  tavern: { name: "Tavern", desc: "lets you hire a second hero" },
+  warehouse: { name: "Warehouse", desc: "+2 metal and +1 crystal a day" },
+  fort: { name: "Fort", desc: "+50% creature growth, the garrison grows twice as fast" },
+  citadel: { name: "Citadel", desc: "another +50% creature growth and +500 gold a day" },
 };
 
 const EN_SPELLS: Record<SpellId, string> = { bolt: "Lightning", heal: "Heal", haste: "Haste" };
@@ -258,6 +262,12 @@ const EN_MESSAGES: Record<string, string> = {
   "Новая неделя! В замке новые войска.": "A new week! New troops in the castle.",
   "Рудник ваш: +500 золота в день": "The mine is yours: +500 gold a day",
   "Гарнизон замка встаёт на защиту вместе с героем!": "The castle garrison joins the hero in defence!",
+  "Не хватает ресурсов": "Not enough resources",
+  "Нет такого героя": "No such hero",
+  "Этот герой разбит и вернётся утром": "This hero was beaten and returns in the morning",
+  "У замка нет свободного места": "There is no free tile next to the castle",
+  "Рудник ваш: +2 металла в день": "The mine is yours: +2 metal a day",
+  "Рудник ваш: +1 кристалл в день": "The mine is yours: +1 crystal a day",
   // match server
   "Слишком много действий, подождите немного": "Too many actions, wait a moment",
   "Неверное сообщение": "Invalid message",
@@ -306,6 +316,8 @@ const EN_PATTERNS: readonly [RegExp, (m: RegExpMatchArray) => string | null][] =
   [/^\+([\d\s ]+) золота$/, (m) => `+${(m[1] ?? "").trim()} gold`],
   [/^(.+) захватывает замок!$/, (m) => `${m[1] ?? ""} captures a castle!`],
   [/^(.+) разбит и вернётся в замок завтра с отрядом ополчения\.$/, (m) => `${m[1] ?? ""} is beaten and returns to the castle tomorrow with a militia.`],
+  [/^Героев не больше (\d+)$/, (m) => `At most ${m[1] ?? ""} heroes`],
+  [/^В таверне нанят герой (.+)\. Он ждёт у замка\.$/, (m) => `${m[1] ?? ""} joins you from the tavern and waits next to the castle.`],
   [/^(.+) вернулся в замок и снова готов к походу\.$/, (m) => `${m[1] ?? ""} is back in the castle and ready to march.`],
   [/^Без замка! Дней, чтобы отбить замок: (\d+)\.$/, (m) => `No castle! Days left to take one back: ${m[1] ?? ""}.`],
   [/^Последний замок потерян! У вас (\d+) дней, чтобы захватить замок\.$/, (m) => `Your last castle is lost! You have ${m[1] ?? ""} days to capture one.`],

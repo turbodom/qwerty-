@@ -9,7 +9,7 @@ import { artUrl, unitPicUrl } from "../gfx/artUrls";
 import { bridge } from "../game/bridge";
 import type { BattleBarState, UiHooks } from "../game/bridge";
 import { Director } from "../game/director";
-import { mePlayer, myBattle, myHero, objectAtView, ownerColor, weekDay } from "../game/helpers";
+import { mePlayer, myBattle, myHero, objectAtView, otherHeroes, ownerColor, weekDay } from "../game/helpers";
 import { feedbackFromEvents } from "../game/toasts";
 import { fmtNum, onLangChange, t } from "../i18n";
 import { engineText } from "../i18n/catalog";
@@ -556,6 +556,11 @@ export class App implements AppApi, ScreenApi, UiHooks {
         fmtNum(me.gold),
         h("small", null, t("top.income", { amount: fmtNum(income(view.state, view.you)) })),
       ),
+      h(
+        "span",
+        { class: "day", testid: "res", title: t("top.res", { metal: me.res?.metal ?? 0, crystal: me.res?.crystal ?? 0 }) },
+        `${me.res?.metal ?? 0} ${t("res.metalShort")} · ${me.res?.crystal ?? 0} ${t("res.crystalShort")}`,
+      ),
       h("span", { class: "day", testid: "day" }, t("top.day", { week: wd.week, day: wd.day })),
     );
     if (showTimer) this.top.append(h("span", { class: "timer", id: "timer", title: t("top.timerLabel") }, this.timerText()));
@@ -661,6 +666,8 @@ export class App implements AppApi, ScreenApi, UiHooks {
         ),
       );
     }
+    const others = otherHeroes(view);
+    const next = others[0];
     const questsDone = QUESTS.filter((q) => me.quests[q.id]).length;
     const over = view.state.winner !== null || me.defeated;
     const inBattle = !!myBattle(view);
@@ -675,6 +682,18 @@ export class App implements AppApi, ScreenApi, UiHooks {
           hero && hero.bag.length > 0 ? h("span", { class: "count" }, `+${hero.bag.length}`) : null,
         ),
         h("button", { class: "btn ghost", testid: "bar-castle", onClick: () => this.openPanel(castlePanel) }, t("bar.castle")),
+        next
+          ? h(
+              "button",
+              {
+                class: "btn ghost",
+                testid: "bar-next-hero",
+                disabled: inBattle,
+                onClick: () => void this.selectHero(next.id, next.name),
+              },
+              t("bar.nextHero"),
+            )
+          : null,
         h(
           "button",
           { class: "btn ghost", testid: "bar-quests", onClick: () => this.openPanel(questsPanel) },
@@ -693,6 +712,11 @@ export class App implements AppApi, ScreenApi, UiHooks {
         ),
       ),
     );
+  }
+
+  private async selectHero(id: string, name: string): Promise<void> {
+    const res = await bridge.act({ type: "selectHero", hero: id });
+    if (res.ok) this.hint(t("hint.heroSelected", { name }));
   }
 
   private async endDay(): Promise<void> {

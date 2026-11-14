@@ -98,7 +98,10 @@ export function isGameAction(x: unknown): x is GameAction {
       return hasKeys(x, ["type", "to"]) && isPoint(x["to"]);
     case "endDay":
     case "autoBattle":
+    case "hireHero":
       return hasKeys(x, ["type"]);
+    case "selectHero":
+      return hasKeys(x, ["type", "hero"]) && typeof x["hero"] === "string" && x["hero"].length > 0 && x["hero"].length <= 32;
     case "hire":
     case "upgrade":
       return hasKeys(x, ["type", "unit"]) && isOneOf(x["unit"], UNIT_IDS);
