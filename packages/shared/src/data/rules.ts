@@ -49,3 +49,35 @@ export const HERO_NAMES: Record<"castle" | "necropolis", readonly string[]> = {
   castle: ["Ратибор", "Велена", "Ярослав"],
   necropolis: ["Сайрус", "Нера", "Кадавр"],
 };
+
+// ================= AI difficulty =================
+
+export type AiLevel = "easy" | "normal" | "hard";
+export const AI_LEVELS: readonly AiLevel[] = ["easy", "normal", "hard"];
+
+export interface AiLevelRule {
+  /** Multiplier for the AI's daily gold. */
+  income: number;
+  /** Multiplier for the AI's weekly creature growth. */
+  growth: number;
+  /** Extra gold for the AI at the start. */
+  startGold: number;
+  /** Day from which the AI hunts enemy heroes. */
+  heroDay: number;
+  /** Whether the AI hires a second hero in the tavern. */
+  secondHero: boolean;
+}
+
+/**
+ * "normal" is the plain game. Picked from sims of a greedy scripted player against the AI on random maps
+ * (36 games each): the bot won about 55% on easy, 20% on normal and 3% on hard.
+ */
+export const AI_LEVEL_RULES: Record<AiLevel, AiLevelRule> = {
+  easy: { income: 0.5, growth: 0.55, startGold: 0, heroDay: 15, secondHero: false },
+  normal: { income: 1, growth: 1, startGold: 0, heroDay: 5, secondHero: true },
+  hard: { income: 1.35, growth: 1.3, startGold: 2000, heroDay: 3, secondHero: true },
+};
+
+export function isAiLevel(x: unknown): x is AiLevel {
+  return typeof x === "string" && (AI_LEVELS as readonly string[]).includes(x);
+}

@@ -20,6 +20,8 @@ export const STORAGE_KEYS = {
   guestName: "korony-guest-name",
   /** Map chosen for new games against the AI ("random-m", "valley", ...). */
   aiMap: "korony-ai-map",
+  /** AI difficulty for new games against the AI ("easy", "normal", "hard"). */
+  aiLevel: "korony-ai-level",
 } as const;
 
 /** In-memory storage (used as a fallback and in tests). */

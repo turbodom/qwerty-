@@ -76,8 +76,8 @@ describe("other data", () => {
     expect(weeklyGrowth("castle", 2, {})).toEqual({ pike: 10, archer: 6 });
     expect(weeklyGrowth("castle", 2, { griffinTower: true })).toEqual({ pike: 10, archer: 6, griffin: 3 });
     // prototype weekly tick: skel +12, ghost +5, lich +2 from week 2 (the start pool 8/3/0 is different)
-    expect(weeklyGrowth("necropolis", 1, {})).toEqual({ skeleton: 12, ghost: 5 });
-    expect(weeklyGrowth("necropolis", 2, {})).toEqual({ skeleton: 12, ghost: 5, lich: 2 });
+    expect(weeklyGrowth("necropolis", 1, {})).toEqual({ skeleton: 13, ghost: 5 });
+    expect(weeklyGrowth("necropolis", 2, {})).toEqual({ skeleton: 13, ghost: 5, lich: 2 });
     expect(START_GROWTH.necropolis).toEqual({ skeleton: 8, ghost: 3, lich: 0 });
   });
 });

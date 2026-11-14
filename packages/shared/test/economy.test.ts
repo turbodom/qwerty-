@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { GameState, PlayerState } from "../src";
 import {
-  BUILDINGS, HERO_COST, MAX_HEROES, applyAction, createGame, generateMap, getPlayer, heroesOf, income,
+  AI_LEVEL_RULES, BUILDINGS, HERO_COST, aiWantsHero, isAiLevel, MAX_HEROES, applyAction, createGame, generateMap, getPlayer, heroesOf, income,
   isGameAction, ownedCastles, playerView, resourceIncome, reveal,
 } from "../src";
 
@@ -185,5 +185,75 @@ describe("a second hero", () => {
     for (let d = 0; d < 6 && s.winner === null; d++) applyAction(s, "p0", { type: "endDay" });
     expect(me(s, "p1").built.tavern).toBe(true);
     expect(me(s, "p1").heroIds).toHaveLength(2);
+  });
+
+  it("two heroes of one player never end up on the same tile", () => {
+    const s = valley();
+    inCastle(s);
+    me(s).built.tavern = true;
+    applyAction(s, "p0", { type: "hireHero" });
+    const p = me(s);
+    const second = s.heroes[p.heroIds![1]!]!;
+    const h0 = s.heroes["h0"]!;
+    expect(applyAction(s, "p0", { type: "selectHero", hero: second.id }).ok).toBe(true);
+    // walking onto the friend stops next to it (the second hero starts next to the first)
+    applyAction(s, "p0", { type: "move", to: { x: h0.x, y: h0.y } });
+    expect([second.x, second.y]).not.toEqual([h0.x, h0.y]);
+    const live = Object.values(s.heroes).filter((h) => h.alive).map((h) => `${h.x},${h.y}`);
+    expect(new Set(live).size).toBe(live.length);
+  });
+});
+
+describe("AI difficulty", () => {
+  const game = (aiLevel?: "easy" | "normal" | "hard"): GameState =>
+    createGame({
+      id: "g", mapId: "valley", seed: 7, ...(aiLevel ? { aiLevel } : {}),
+      players: [{ id: "p0", name: "A", isAI: false }, { id: "p1", name: "B", isAI: true }],
+    });
+
+  it("is stored only when it is not normal and gives the AI its start gold", () => {
+    expect(game().aiLevel).toBeUndefined();
+    expect(game("normal").aiLevel).toBeUndefined();
+    const hard = game("hard");
+    expect(hard.aiLevel).toBe("hard");
+    expect(me(hard, "p1").gold).toBe(me(game(), "p1").gold + AI_LEVEL_RULES.hard.startGold);
+    // the human always plays the plain game
+    expect(me(hard, "p0").gold).toBe(me(game(), "p0").gold);
+    expect(isAiLevel("hard")).toBe(true);
+    expect(isAiLevel("nightmare")).toBe(false);
+  });
+
+  it("scales the AI's daily gold, never the human's", () => {
+    const incomeOf = (lvl: "easy" | "normal" | "hard", who: string): number => {
+      const s = game(lvl);
+      const r = applyAction(s, "p0", { type: "endDay" });
+      const e = r.events.find((x) => x.type === "gold" && x.player === who && x.reason === "income");
+      return e && e.type === "gold" ? e.amount : -1;
+    };
+    const base = incomeOf("normal", "p1");
+    expect(base).toBeGreaterThan(0);
+    expect(incomeOf("easy", "p1")).toBe(Math.round(base * AI_LEVEL_RULES.easy.income));
+    expect(incomeOf("hard", "p1")).toBe(Math.round(base * AI_LEVEL_RULES.hard.income));
+    expect(incomeOf("hard", "p0")).toBe(incomeOf("normal", "p0"));
+  });
+
+  it("on easy the AI never hires a second hero", () => {
+    const s = game("easy");
+    const ai = me(s, "p1");
+    ai.built.tavern = true;
+    ai.gold = 50000;
+    expect(aiWantsHero(s, "p1")).toBeNull();
+    const n = game("hard");
+    me(n, "p1").built.tavern = true;
+    me(n, "p1").gold = 50000;
+    expect(aiWantsHero(n, "p1")).not.toBeNull();
+  });
+
+  it("survives a JSON round trip and plays on", () => {
+    const s = game("hard");
+    const copy = JSON.parse(JSON.stringify(s)) as GameState;
+    expect(copy).toStrictEqual(s);
+    for (let d = 0; d < 5; d++) applyAction(copy, "p0", { type: "endDay" });
+    expect(copy.aiLevel).toBe("hard");
   });
 });

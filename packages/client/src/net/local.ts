@@ -1,5 +1,5 @@
 import { applyAction, createGame, eventsForPlayer, playerView } from "@korony/shared";
-import type { GameAction, GameState, PlayerLoadout, PlayerView } from "@korony/shared";
+import type { AiLevel, GameAction, GameState, PlayerLoadout, PlayerView } from "@korony/shared";
 import { DEFAULT_MAP_ID } from "../config";
 import { STORAGE_KEYS, defaultStorage, readJson, removeItem, writeJson } from "../storage";
 import type { KeyValueStorage } from "../storage";
@@ -20,6 +20,8 @@ export interface LocalGameOptions {
   loadout?: PlayerLoadout;
   seed?: number;
   mapId?: string;
+  /** AI difficulty (default "normal"). */
+  aiLevel?: AiLevel;
   store?: KeyValueStorage;
 }
 
@@ -75,6 +77,7 @@ export class LocalGame implements GameConnection {
       id: `local-${seed.toString(36)}`,
       mapId: opts.mapId ?? DEFAULT_MAP_ID,
       seed,
+      ...(opts.aiLevel ? { aiLevel: opts.aiLevel } : {}),
       players: [opts.loadout ? { ...human, loadout: opts.loadout } : human, { id: LOCAL_AI_ID, name: "ИИ", isAI: true }],
     });
     const game = new LocalGame(state, store);
