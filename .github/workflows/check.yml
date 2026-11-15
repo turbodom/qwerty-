@@ -14,10 +14,3 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check
-      # the built client, so a change can be tried and screenshotted before it reaches main
-      - uses: actions/upload-artifact@v4
-        if: github.event_name == 'pull_request'
-        with:
-          name: client-dist
-          path: packages/client/dist
-          retention-days: 3
