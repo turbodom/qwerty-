@@ -64,6 +64,7 @@ button, input { font: inherit; color: inherit; }
 }
 .topbar .brand { font-family: var(--display); color: var(--gold-2); text-shadow: 0 1px 0 #000; font-size: 20px; line-height: 1.1; flex: 1; min-width: 0; }
 .topbar .res { display: flex; align-items: center; gap: 6px; font-weight: 700; white-space: nowrap; min-width: 0; overflow: hidden; }
+.topbar .day .week-ev { display: block; color: #8fd1ff; font-weight: 600; font-size: 11px; line-height: 1.1; }
 .topbar .res small { color: var(--muted); font-weight: 400; font-size: 12px; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .coin { width: 20px; height: 20px; flex: none; background: url(/art/res-gold.webp) center / contain no-repeat; display: inline-block; }
 .topbar .day { color: var(--gold); font-weight: 700; white-space: nowrap; margin-left: auto; font-size: 14px; min-width: 0; overflow: hidden; text-overflow: ellipsis; }

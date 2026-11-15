@@ -562,7 +562,12 @@ export class App implements AppApi, ScreenApi, UiHooks {
         { class: "day", testid: "res", title: t("top.res", { metal: me.res?.metal ?? 0, crystal: me.res?.crystal ?? 0 }) },
         `${me.res?.metal ?? 0} ${t("res.metalShort")} · ${me.res?.crystal ?? 0} ${t("res.crystalShort")}`,
       ),
-      h("span", { class: "day", testid: "day" }, t("top.day", { week: wd.week, day: wd.day })),
+      h(
+        "span",
+        { class: "day", testid: "day", title: view.state.week ? t(`week.${view.state.week}.desc`) : t("week.plain.desc") },
+        t("top.day", { week: wd.week, day: wd.day }),
+        view.state.week ? h("small", { class: "week-ev", testid: "week-event" }, t(`week.${view.state.week}`)) : "",
+      ),
     );
     if (showTimer) this.top.append(h("span", { class: "timer", id: "timer", title: t("top.timerLabel") }, this.timerText()));
     this.top.append(

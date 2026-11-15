@@ -6,7 +6,7 @@ import {
 } from "../gfx/art";
 import type { Pic } from "../gfx/art";
 import {
-  bakeArt, bakeBattleBg, bakeCastle, bakeChest, bakeDot, bakeHero, bakeHex, bakeMine, bakeRock, bakeTerrain,
+  bakeArt, bakeSite, bakeBattleBg, bakeCastle, bakeChest, bakeDot, bakeHero, bakeHex, bakeMine, bakeRock, bakeTerrain,
   bakeMuzzle, bakeSmoke, bakeTileMark, bakeUnit, colorHex,
 } from "../gfx/bake";
 import type { Baked } from "../gfx/bake";
@@ -89,6 +89,7 @@ export class BootScene extends Phaser.Scene {
     }
     this.add1(mineKey(null), mine ? paintMine(mine, null, MAP_K) : bakeMine(null, MAP_K));
     this.add1(TEX.chest, chest ? paintChest(chest, MAP_K) : bakeChest(MAP_K));
+    for (const k of ["shrine", "well", "camp", "campEmpty"] as const) this.add1(TEX[k], bakeSite(k, MAP_K));
     for (const id of ARTIFACT_IDS) {
       const art = this.pic(`art-${id}`);
       this.add1(artKey(id), art ? paintArtifact(art, MAP_K) : bakeArt(id, MAP_K));

@@ -6,6 +6,7 @@ import { UNITS, UPGRADES } from "./data/units";
 import type { BuildingId } from "./data/buildings";
 import { BUILDINGS } from "./data/buildings";
 import { BUILDING_GROWTH, FACTION_UNITS, HIRE_REQUIRES, isNewWeek } from "./data/growth";
+import { campStack } from "./data/sites";
 import { AI_LEVEL_RULES, HERO_COST, MAX_ARMY_STACKS, MAX_HEROES, RESOURCE_IDS } from "./data/rules";
 import { findPath, getPlayer, guardOf, heroesOf, ownedCastles, playerHeroIds, resourceOf, terrainOk } from "./map";
 import { heroPower, maxMovement, mergeArmy } from "./hero";
@@ -15,6 +16,7 @@ import { heroPower, maxMovement, mergeArmy } from "./hero";
 /** Target values (gold-like score) before subtracting the path cost. */
 export const AI_VALUE = {
   chest: 1000, mine: 1400, artifact: 1500, monster: 700, castle: 5000, hero: 3000, neutralCastle: 4000, retreat: 2600,
+  shrine: 1300, camp: 1100,
 } as const;
 /** Score lost per step of the path. */
 export const AI_STEP_COST = 60;
@@ -57,6 +59,12 @@ function heroOfPlayer(state: GameState, p: PlayerState | undefined): Hero | unde
  * Returns the full path (not cut to the hero's movement points), or [] when nothing is worth it.
  * The AI plans with full knowledge of the map, as in the prototype.
  */
+/** True when the camp's stack fits into the hero's army. */
+function campFits(h: Hero, p: PlayerState): boolean {
+  const st = campStack(p.faction);
+  return !!st && (h.army.length < MAX_ARMY_STACKS || h.army.some((s) => s.unit === st.unit));
+}
+
 export function planAiMove(state: GameState, playerId: PlayerId, heroId?: string): Point[] {
   const p = getPlayer(state, playerId);
   const h = heroId === undefined ? heroOfPlayer(state, p) : state.heroes[heroId];
@@ -67,6 +75,8 @@ export function planAiMove(state: GameState, playerId: PlayerId, heroId?: string
   // walking into that hero starts the hero battle, which is exactly what the prototype AI does
   // (e.g. rushing the castle at 1.2x power while its defender sits inside).
   const consider = (x: number, y: number, value: number): void => {
+    // a tile held by another own hero cannot be entered (the walk stops next to it): never aim there
+    if (Object.values(state.heroes).some((o) => o.id !== h.id && o.alive && o.owner === h.owner && o.x === x && o.y === y)) return;
     const path = findPath(state, h.id, { x, y });
     if (path.length === 0) return;
     const score = value - path.length * AI_STEP_COST;
@@ -117,6 +127,11 @@ export function planAiMove(state: GameState, playerId: PlayerId, heroId?: string
         break;
       case "monster":
         if (myP > heroPower(o.army ?? [], null) * AI_MONSTER_MARGIN) consider(o.x, o.y, AI_VALUE.monster);
+        break;
+      case "site":
+        // wells only matter on the way, so the AI does not walk to them on purpose
+        if (o.site === "shrine" && o.visits?.[h.id] === undefined) consider(o.x, o.y, AI_VALUE.shrine);
+        if (o.site === "camp" && (o.stock ?? 0) > 0 && campFits(h, p)) consider(o.x, o.y, AI_VALUE.camp);
         break;
       case "castle":
         if (!o.owner) {

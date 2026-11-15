@@ -11,6 +11,7 @@ export * from "./data/quests";
 export * from "./data/shop";
 export * from "./data/growth";
 export * from "./data/rules";
+export * from "./data/sites";
 export * from "./maps";
 export * from "./mapgen";
 export * from "./hero";

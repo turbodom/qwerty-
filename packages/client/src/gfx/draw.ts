@@ -462,3 +462,104 @@ export function tileDeco(x: number, y: number): [number, number, number] {
   };
   return [next(), next(), next()];
 }
+
+// ================= map sites =================
+
+/** Shrine of experience: a stone plinth with a glowing blue crystal. */
+export function drawShrine(ctx: Ctx, cx: number, cy: number): void {
+  const glow = ctx.createRadialGradient(cx, cy - 8, 1, cx, cy - 8, 16);
+  glow.addColorStop(0, "rgba(140,200,255,.75)");
+  glow.addColorStop(1, "rgba(140,200,255,0)");
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.arc(cx, cy - 8, 16, 0, TAU);
+  ctx.fill();
+  ctx.fillStyle = "#4f4a42";
+  ctx.fillRect(cx - 13, cy + 8, 26, 6);
+  ctx.fillStyle = "#6b655b";
+  ctx.fillRect(cx - 10, cy + 3, 20, 6);
+  ctx.fillStyle = "#857e72";
+  ctx.fillRect(cx - 10, cy + 3, 20, 2);
+  ctx.fillStyle = "#7fc3ff";
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - 19);
+  ctx.lineTo(cx + 6, cy - 7);
+  ctx.lineTo(cx, cy + 3);
+  ctx.lineTo(cx - 6, cy - 7);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = "#d8efff";
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - 19);
+  ctx.lineTo(cx + 2, cy - 7);
+  ctx.lineTo(cx, cy + 3);
+  ctx.lineTo(cx - 3, cy - 7);
+  ctx.closePath();
+  ctx.fill();
+}
+
+/** Well: a round stone rim with water, a little roof on two posts. */
+export function drawWell(ctx: Ctx, cx: number, cy: number): void {
+  ctx.fillStyle = "#5c5750";
+  ctx.beginPath();
+  ctx.ellipse(cx, cy + 8, 13, 6, 0, 0, TAU);
+  ctx.fill();
+  ctx.fillStyle = "#2f6b96";
+  ctx.beginPath();
+  ctx.ellipse(cx, cy + 7, 9, 3.6, 0, 0, TAU);
+  ctx.fill();
+  ctx.fillStyle = "#7ab3d8";
+  ctx.fillRect(cx - 4, cy + 6, 4, 1.4);
+  ctx.fillStyle = "#4a3324";
+  ctx.fillRect(cx - 12, cy - 12, 2.5, 20);
+  ctx.fillRect(cx + 9.5, cy - 12, 2.5, 20);
+  ctx.fillStyle = "#7a4a22";
+  ctx.beginPath();
+  ctx.moveTo(cx - 16, cy - 10);
+  ctx.lineTo(cx, cy - 20);
+  ctx.lineTo(cx + 16, cy - 10);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = "#94592a";
+  ctx.fillRect(cx - 16, cy - 11, 32, 2);
+}
+
+/** Mercenary camp: a canvas tent and a campfire, a flag on a pole. */
+export function drawCamp(ctx: Ctx, cx: number, cy: number, empty: boolean): void {
+  ctx.fillStyle = empty ? "#6d6656" : "#8f845f";
+  ctx.beginPath();
+  ctx.moveTo(cx - 16, cy + 12);
+  ctx.lineTo(cx - 4, cy - 12);
+  ctx.lineTo(cx + 8, cy + 12);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = "#2a2318";
+  ctx.beginPath();
+  ctx.moveTo(cx - 8, cy + 12);
+  ctx.lineTo(cx - 4, cy + 1);
+  ctx.lineTo(cx, cy + 12);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = "#3a2a1a";
+  ctx.fillRect(cx - 5, cy - 20, 1.6, 10);
+  ctx.fillStyle = empty ? "#777" : "#c0392b";
+  ctx.fillRect(cx - 3.4, cy - 20, 8, 5);
+  if (!empty) {
+    ctx.fillStyle = "#e67e22";
+    ctx.beginPath();
+    ctx.moveTo(cx + 9, cy + 13);
+    ctx.lineTo(cx + 13, cy + 3);
+    ctx.lineTo(cx + 17, cy + 13);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "#f7d774";
+    ctx.beginPath();
+    ctx.moveTo(cx + 11, cy + 13);
+    ctx.lineTo(cx + 13, cy + 7);
+    ctx.lineTo(cx + 15, cy + 13);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.fillStyle = "#4a3324";
+  ctx.fillRect(cx + 8, cy + 12, 10, 2);
+}
