@@ -87,6 +87,16 @@ button, input { font: inherit; color: inherit; }
 }
 .icon-btn:active { transform: translateY(1px); }
 
+/* ---------- map tools: mini-map, chronicle, to the hero ---------- */
+.maptools { position: absolute; top: 8px; right: 8px; z-index: 5; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; pointer-events: none; }
+.maptools > * { pointer-events: auto; }
+.minimap { padding: 3px; border: 1px solid var(--frame); border-radius: 6px; background: rgba(11, 12, 16, 0.86); box-shadow: 0 3px 10px rgba(0, 0, 0, 0.55); line-height: 0; }
+.minimap-canvas { display: block; touch-action: none; cursor: pointer; image-rendering: pixelated; border-radius: 3px; }
+.maptools-btns { display: flex; gap: 6px; }
+.icon-btn.round { width: 40px; height: 40px; border-radius: 50%; font-size: 17px; }
+.icon-btn.accent { color: #1a1408; background: linear-gradient(#f0d38a, #b98a2e); border-color: #f0d38a; }
+@media (max-width: 380px) { .icon-btn.round { width: 36px; height: 36px; } }
+
 /* ---------- hint line ---------- */
 /* Fixed two-line height: the canvas below must not resize (and move the tiles) when the text changes. */
 .hint {
