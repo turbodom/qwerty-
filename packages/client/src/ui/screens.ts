@@ -1,5 +1,6 @@
 /** Full-stage screens: login, lobby and the online waiting room. */
-import { ROOM_CODE_MAX } from "@korony/shared";
+import { AI_LEVELS, ROOM_CODE_MAX, isAiLevel } from "@korony/shared";
+import type { AiLevel } from "@korony/shared";
 import type { User } from "../api";
 import { t } from "../i18n";
 import { STORAGE_KEYS, readItem, writeItem } from "../storage";
@@ -48,6 +49,39 @@ function mapLabel(id: AiMapChoice): string {
     case "random-l": return t("lobby.mapSize.l");
     case "valley": return t("lobby.mapSize.valley");
   }
+}
+
+/** AI difficulty for the next game (remembered in storage, "normal" by default). */
+export function chosenAiLevel(): AiLevel {
+  const saved = readItem(STORAGE_KEYS.aiLevel);
+  return isAiLevel(saved) ? saved : "normal";
+}
+
+function levelPicker(api: ScreenApi): HTMLElement {
+  const current = chosenAiLevel();
+  return h(
+    "div",
+    { class: "row", testid: "ai-level" },
+    h("span", { class: "muted" }, t("lobby.aiLevel")),
+    h(
+      "div",
+      { style: "display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end" },
+      ...AI_LEVELS.map((id) =>
+        h(
+          "button",
+          {
+            class: id === current ? "btn small" : "btn ghost small",
+            testid: `ai-level-${id}`,
+            onClick: () => {
+              writeItem(STORAGE_KEYS.aiLevel, id);
+              api.rerender();
+            },
+          },
+          t(`lobby.aiLevel.${id}`),
+        ),
+      ),
+    ),
+  );
 }
 
 function mapPicker(api: ScreenApi): HTMLElement {
@@ -228,6 +262,7 @@ export function lobbyScreen(api: ScreenApi): HTMLElement {
       "div",
       { class: "card" },
       mapPicker(api),
+      levelPicker(api),
       h("button", { class: "btn block", testid: "play-ai", onClick: () => api.playAi(true) }, t("lobby.playAi")),
       saved !== null
         ? h(

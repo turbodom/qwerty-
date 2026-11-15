@@ -13,9 +13,9 @@ import type { QuestId } from "./data/quests";
 import { QUESTS } from "./data/quests";
 import {
   CHEST_GOLD, DAYS_PER_WEEK, DROP_CHANCE, GARRISON_WEEKLY, HERO_COST, HERO_NAMES, HOMELESS_DAYS, MAX_ARMY_STACKS, MAX_HEROES,
-  MINE_INCOME, MINE_YIELD_TEXT, RESOURCE_IDS, REVIVE_ARMY, START_RESOURCES,
+  AI_LEVEL_RULES, MINE_INCOME, MINE_YIELD_TEXT, RESOURCE_IDS, REVIVE_ARMY, START_RESOURCES, isAiLevel,
 } from "./data/rules";
-import type { ResourceId } from "./data/rules";
+import type { AiLevel, AiLevelRule, ResourceId } from "./data/rules";
 import type { SkillId } from "./data/skills";
 import { SKILLS, SKILL_IDS, expToNext } from "./data/skills";
 import type { SpellId } from "./data/spells";
@@ -40,7 +40,19 @@ import { isGameAction } from "./protocol";
 /** Log lines kept in GameState.log (oldest dropped first). */
 export const LOG_LIMIT = 100;
 
-export interface CreateGameOptions { id: string; mapId: string; seed: number; players: [PlayerSetup, PlayerSetup] }
+export interface CreateGameOptions {
+  id: string;
+  mapId: string;
+  seed: number;
+  players: [PlayerSetup, PlayerSetup];
+  /** Difficulty of the AI players (default "normal"). */
+  aiLevel?: AiLevel;
+}
+
+/** Difficulty rules for a player: the AI follows the game's level, humans always play the plain game. */
+export function aiRule(state: GameState, p: PlayerState): AiLevelRule {
+  return AI_LEVEL_RULES[p.isAI && state.aiLevel ? state.aiLevel : "normal"];
+}
 
 /** Mutable context of one applyAction call: the game rng is persisted only when the action succeeds. */
 interface Ctx { state: GameState; rng: Rng; events: GameEvent[] }
@@ -211,9 +223,10 @@ export function createGame(opts: CreateGameOptions): GameState {
     heroes[heroId] = hero;
     const bonus = lo?.startGold !== undefined && Number.isFinite(lo.startGold) && lo.startGold > 0
       ? Math.floor(lo.startGold) : 0;
+    const level = setup.isAI && isAiLevel(opts.aiLevel) ? opts.aiLevel : "normal";
     const p: PlayerState = {
       id: setup.id, name: setup.name, seat, isAI: !!setup.isAI, faction: start.faction,
-      gold: start.gold + bonus, res: { ...START_RESOURCES }, heroId, heroIds: [heroId], castleId: castle.id, explored: emptyExplored(map.cols, map.rows),
+      gold: start.gold + bonus + AI_LEVEL_RULES[level].startGold, res: { ...START_RESOURCES }, heroId, heroIds: [heroId], castleId: castle.id, explored: emptyExplored(map.cols, map.rows),
       growth: { ...START_GROWTH[start.faction] }, built: {}, builtToday: false, quests: {}, levelChoices: [],
       endedDay: false, defeated: false,
     };
@@ -226,6 +239,7 @@ export function createGame(opts: CreateGameOptions): GameState {
     day: 1, rngState: opts.seed >>> 0, players, heroes, objects, battles: [], winner: null,
     log: [`${map.name}: партия началась`],
   };
+  if (isAiLevel(opts.aiLevel) && opts.aiLevel !== "normal") state.aiLevel = opts.aiLevel;
   revealAll(state);
   return state;
 }
@@ -645,6 +659,8 @@ function walk(ctx: Ctx, p: PlayerState, hero: Hero, path: readonly Point[]): voi
       toast(ctx, "Там уже идёт бой.", p.id);
       break;
     }
+    // two heroes of one player never share a tile: stop next to the friend
+    if (Object.values(state.heroes).some((h) => h.id !== hero.id && h.alive && h.owner === hero.owner && h.x === st.x && h.y === st.y)) break;
     hero.x = st.x;
     hero.y = st.y;
     hero.mp--;
@@ -679,7 +695,7 @@ function endOfDay(ctx: Ctx): void {
   state.day++;
   const live = state.players.filter((p) => !p.defeated);
   for (const p of live) {
-    addGold(ctx, p, income(state, p.id), "income");
+    addGold(ctx, p, Math.round(income(state, p.id) * aiRule(state, p).income), "income");
     const add = resourceIncome(state, p.id);
     const res = { ...(p.res ?? {}) };
     for (const r of RESOURCE_IDS) res[r] = (res[r] ?? 0) + add[r];
@@ -692,7 +708,7 @@ function endOfDay(ctx: Ctx): void {
       // every castle the player holds adds a week of creatures (a captured fortress doubles the growth)
       // the fort and the citadel add +50% each
       const castles = ownedCastles(state, p.id).length;
-      const mult = 1 + (p.built.fort ? 0.5 : 0) + (p.built.citadel ? 0.5 : 0);
+      const mult = (1 + (p.built.fort ? 0.5 : 0) + (p.built.citadel ? 0.5 : 0)) * aiRule(state, p).growth;
       const add = weeklyGrowth(p.faction, week, p.built);
       for (const [unit, n] of Object.entries(add) as [UnitId, number][]) {
         p.growth[unit] = (p.growth[unit] ?? 0) + Math.round(n * castles * mult);

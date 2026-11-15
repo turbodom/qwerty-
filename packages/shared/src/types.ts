@@ -5,7 +5,7 @@ import type { SkillId } from "./data/skills";
 import type { SpellId } from "./data/spells";
 import type { StatKey } from "./data/stats";
 import type { Faction, UnitId } from "./data/units";
-import type { ResourceId } from "./data/rules";
+import type { AiLevel, ResourceId } from "./data/rules";
 
 // ================= map / game state =================
 
@@ -97,6 +97,8 @@ export interface GameState {
   battles: ActiveBattle[];
   winner: PlayerId | null;
   log: string[];
+  /** Difficulty of the AI players; missing means "normal" (old saves, online matches). */
+  aiLevel?: AiLevel;
 }
 
 export interface PlayerLoadout { startArtifact?: ArtifactId; startGold?: number; banner?: string }

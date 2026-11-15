@@ -6,7 +6,7 @@ import { UNITS, UPGRADES } from "./data/units";
 import type { BuildingId } from "./data/buildings";
 import { BUILDINGS } from "./data/buildings";
 import { BUILDING_GROWTH, FACTION_UNITS, HIRE_REQUIRES, isNewWeek } from "./data/growth";
-import { HERO_COST, MAX_ARMY_STACKS, MAX_HEROES, RESOURCE_IDS } from "./data/rules";
+import { AI_LEVEL_RULES, HERO_COST, MAX_ARMY_STACKS, MAX_HEROES, RESOURCE_IDS } from "./data/rules";
 import { findPath, getPlayer, guardOf, heroesOf, ownedCastles, playerHeroIds, resourceOf, terrainOk } from "./map";
 import { heroPower, maxMovement, mergeArmy } from "./hero";
 
@@ -24,6 +24,11 @@ export const AI_GUARD_MARGIN = 1.3;
 export const AI_MONSTER_MARGIN = 1.5;
 /** Attack the enemy hero from this day on, when this many times stronger. */
 export const AI_HERO_DAY = 5;
+
+/** Day from which the AI hunts enemy heroes at the game's difficulty (AI_HERO_DAY on "normal"). */
+function heroDay(state: GameState): number {
+  return state.aiLevel ? AI_LEVEL_RULES[state.aiLevel].heroDay : AI_HERO_DAY;
+}
 export const AI_HERO_MARGIN = 1.5;
 /** Rush the enemy castle from this day on. */
 export const AI_CASTLE_DAY = 8;
@@ -123,7 +128,7 @@ export function planAiMove(state: GameState, playerId: PlayerId, heroId?: string
     }
   }
 
-  if (state.day >= AI_HERO_DAY) {
+  if (state.day >= heroDay(state)) {
     for (const q of state.players) {
       if (q.id === p.id || q.defeated) continue;
       for (const e of heroesOf(state, q)) {
@@ -247,6 +252,7 @@ export function aiBuild(state: GameState, playerId: PlayerId): { building: Build
 export function aiWantsHero(state: GameState, playerId: PlayerId): MapObject | null {
   const p = getPlayer(state, playerId);
   if (!p || p.defeated || p.faction === "neutral" || !p.built.tavern) return null;
+  if (!AI_LEVEL_RULES[state.aiLevel ?? "normal"].secondHero) return null;
   if (playerHeroIds(p).length >= MAX_HEROES || p.gold < HERO_COST + AI_BUILD_RESERVE * 2) return null;
   const castles = ownedCastles(state, p.id);
   return castles.find((o) => o.id === p.castleId) ?? castles[0] ?? null;

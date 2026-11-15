@@ -47,6 +47,8 @@ describe("LocalGame", () => {
     const a = LocalGame.create({ seed: 1 }).snapshot();
     const b = LocalGame.create({ seed: 2 }).snapshot();
     expect(a.mapId).toBe("random-m");
+    expect(a.aiLevel).toBeUndefined();
+    expect(LocalGame.create({ seed: 3, aiLevel: "hard" }).snapshot().aiLevel).toBe("hard");
     expect([a.cols, a.rows]).toEqual([39, 39]);
     expect(JSON.stringify(a.terrain)).not.toBe(JSON.stringify(b.terrain));
   });
