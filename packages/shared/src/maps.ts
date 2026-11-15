@@ -3,6 +3,7 @@ import type { PlayableFaction } from "./data/units";
 import type { ArmyStack, MapObjectKind, Point, Seat } from "./types";
 import { START_GOLD } from "./data/rules";
 import type { ResourceId } from "./data/rules";
+import type { SiteId } from "./data/sites";
 
 /** "." plain (passable), "F" forest, "M" mountains, "W" water. */
 export type Terrain = "." | "F" | "M" | "W";
@@ -18,6 +19,8 @@ export interface MapObjectDef {
   garrison?: ArmyStack[];
   /** Mines only: metal or crystal (gold when absent). */
   res?: ResourceId;
+  /** Sites only. */
+  site?: SiteId;
 }
 
 export interface MapStart {

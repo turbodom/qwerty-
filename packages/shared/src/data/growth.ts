@@ -33,8 +33,8 @@ export const WEEKLY_GROWTH: Record<PlayableFaction, readonly GrowthRule[]> = {
     { unit: "griffin", amount: 3, requires: "griffinTower" },
   ],
   necropolis: [
-    // 13, not the prototype's 12: AI-vs-AI sims on random maps were 60/40 for the castle with 12
-    { unit: "skeleton", amount: 13 },
+    // 14, not the prototype's 12: with 12, AI-vs-AI sims on random maps (120 games) were about 62/38 for the castle
+    { unit: "skeleton", amount: 14 },
     { unit: "ghost", amount: 5 },
     { unit: "lich", amount: 2, fromWeek: 2 },
   ],

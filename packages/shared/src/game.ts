@@ -16,6 +16,10 @@ import {
   AI_LEVEL_RULES, MINE_INCOME, MINE_YIELD_TEXT, RESOURCE_IDS, REVIVE_ARMY, START_RESOURCES, isAiLevel,
 } from "./data/rules";
 import type { AiLevel, AiLevelRule, ResourceId } from "./data/rules";
+import {
+  PLENTY_GROWTH, SHRINE_EXP, WEEK_EVENTS, campStack, WEEK_EVENT_IDS, WELL_MP, WOLVES_GROWTH,
+} from "./data/sites";
+import type { WeekEventId } from "./data/sites";
 import type { SkillId } from "./data/skills";
 import { SKILLS, SKILL_IDS, expToNext } from "./data/skills";
 import type { SpellId } from "./data/spells";
@@ -202,6 +206,11 @@ export function createGame(opts: CreateGameOptions): GameState {
     if (d.army) o.army = copyArmy(d.army);
     if (d.garrison) o.garrison = copyArmy(d.garrison);
     if (d.res) o.res = d.res;
+    if (d.site) {
+      o.site = d.site;
+      o.visits = {};
+      if (d.site === "camp") o.stock = 1;
+    }
     return o;
   });
 
@@ -643,7 +652,82 @@ function arrive(ctx: Ctx, p: PlayerState, hero: Hero): boolean {
     }
     case "monster":
       return true;
+    case "site":
+      visitSite(ctx, p, hero, o);
+      return false;
   }
+}
+
+/** A shrine, a well or a mercenary camp. */
+function visitSite(ctx: Ctx, p: PlayerState, hero: Hero, o: MapObject): void {
+  const { state } = ctx;
+  const visits = (o.visits ??= {});
+  switch (o.site) {
+    case "shrine":
+      if (visits[hero.id] !== undefined) {
+        toast(ctx, `${hero.name} уже молился в этом святилище.`, p.id);
+        return;
+      }
+      visits[hero.id] = state.day;
+      toast(ctx, `Святилище: +${SHRINE_EXP} опыта`, p.id);
+      gainExp(ctx, hero, SHRINE_EXP);
+      return;
+    case "well":
+      if (visits[hero.id] === state.day) {
+        toast(ctx, "Сегодня герой уже пил из этого колодца.", p.id);
+        return;
+      }
+      visits[hero.id] = state.day;
+      hero.mp += WELL_MP;
+      toast(ctx, `Колодец: +${WELL_MP} шага`, p.id);
+      return;
+    case "camp": {
+      const st = campStack(p.faction);
+      if (!st || (o.stock ?? 0) <= 0) {
+        toast(ctx, "Лагерь пуст. Новые наёмники придут в начале недели.", p.id);
+        return;
+      }
+      if (hero.army.length >= MAX_ARMY_STACKS && !hero.army.some((s) => s.unit === st.unit)) {
+        toast(ctx, `В армии нет места: не больше ${MAX_ARMY_STACKS} отрядов.`, p.id);
+        return;
+      }
+      o.stock = 0;
+      visits[hero.id] = state.day;
+      hero.army = mergeArmy([...hero.army, st]);
+      toast(ctx, `Наёмники присоединились: ${st.count} ${UNITS[st.unit].name.toLowerCase()}`, p.id);
+      return;
+    }
+  }
+}
+
+/** Picks the event of a new week (weighted by WEEK_EVENTS) and applies its one-off part. */
+function startWeekEvent(ctx: Ctx): WeekEventId {
+  const { state } = ctx;
+  const total = WEEK_EVENT_IDS.reduce((n, id) => n + WEEK_EVENTS[id].weight, 0);
+  let roll = ctx.rng.next() * total;
+  let ev: WeekEventId = "plain";
+  for (const id of WEEK_EVENT_IDS) {
+    roll -= WEEK_EVENTS[id].weight;
+    if (roll < 0) {
+      ev = id;
+      break;
+    }
+  }
+  if (ev === "plain") delete state.week;
+  else state.week = ev;
+  for (const o of state.objects) {
+    if (o.gone) continue;
+    if (o.kind === "site" && o.site === "camp") o.stock = 1;
+    if (ev === "wolves" && o.kind === "monster" && o.army && !objectInBattle(state, o.id)) {
+      o.army = o.army.map((s) => ({ unit: s.unit, count: Math.ceil(s.count * WOLVES_GROWTH) }));
+    }
+  }
+  if (ev !== "plain") {
+    const def = WEEK_EVENTS[ev];
+    toast(ctx, `${def.name}: ${def.desc}.`);
+    pushLog(state, `${def.name}: ${def.desc}`);
+  }
+  return ev;
 }
 
 /** Walks the given steps while movement points last, stopping at the first interaction that halts the move. */
@@ -694,6 +778,8 @@ function endOfDay(ctx: Ctx): void {
 
   state.day++;
   const live = state.players.filter((p) => !p.defeated);
+  // the week's event comes first: a golden week already pays this morning
+  const ev = isNewWeek(state.day) ? startWeekEvent(ctx) : undefined;
   for (const p of live) {
     addGold(ctx, p, Math.round(income(state, p.id) * aiRule(state, p).income), "income");
     const add = resourceIncome(state, p.id);
@@ -708,7 +794,8 @@ function endOfDay(ctx: Ctx): void {
       // every castle the player holds adds a week of creatures (a captured fortress doubles the growth)
       // the fort and the citadel add +50% each
       const castles = ownedCastles(state, p.id).length;
-      const mult = (1 + (p.built.fort ? 0.5 : 0) + (p.built.citadel ? 0.5 : 0)) * aiRule(state, p).growth;
+      const mult = (1 + (p.built.fort ? 0.5 : 0) + (p.built.citadel ? 0.5 : 0)) * aiRule(state, p).growth
+        * (ev === "plenty" ? PLENTY_GROWTH : 1);
       const add = weeklyGrowth(p.faction, week, p.built);
       for (const [unit, n] of Object.entries(add) as [UnitId, number][]) {
         p.growth[unit] = (p.growth[unit] ?? 0) + Math.round(n * castles * mult);

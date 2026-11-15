@@ -181,7 +181,7 @@ export function income(state: GameState, playerId: PlayerId): number {
   for (const o of state.objects) {
     if (o.gone || o.owner !== playerId) continue;
     if (o.kind === "castle") g += CASTLE_INCOME;
-    else if (o.kind === "mine" && !o.res) g += MINE_INCOME;
+    else if (o.kind === "mine" && !o.res) g += state.week === "gold" ? MINE_INCOME * 2 : MINE_INCOME;
   }
   const p = getPlayer(state, playerId);
   if (p?.built.citadel && ownedCastles(state, playerId).length > 0) g += CITADEL_INCOME;

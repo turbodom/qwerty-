@@ -5,7 +5,7 @@
 import { ARTIFACTS, UNITS } from "@korony/shared";
 import type { ArtifactId, UnitId } from "@korony/shared";
 import {
-  BANNER_COLORS, COLORS, UNIT_ICON, drawArt, drawCastle, drawChest, drawFlagman, drawMine, drawRock, drawTerrainTile,
+  BANNER_COLORS, COLORS, UNIT_ICON, drawArt, drawCamp, drawCastle, drawChest, drawShrine, drawWell, drawFlagman, drawMine, drawRock, drawTerrainTile,
   hexPath, unitIcon, upgradedMarker,
 } from "./draw";
 import type { TerrainChar } from "./draw";
@@ -71,6 +71,15 @@ export function bakeMine(color: ColorKey | null, scale: number): Baked {
 
 export function bakeChest(scale: number): Baked {
   return bake({ x0: -11, y0: -10, x1: 11, y1: 10 }, scale, (ctx) => drawChest(ctx, 0, 0));
+}
+
+/** Map sites: shrine, well and a mercenary camp (full or emptied this week). */
+export function bakeSite(kind: "shrine" | "well" | "camp" | "campEmpty", scale: number): Baked {
+  return bake({ x0: -18, y0: -22, x1: 19, y1: 16 }, scale, (ctx) => {
+    if (kind === "shrine") drawShrine(ctx, 0, 0);
+    else if (kind === "well") drawWell(ctx, 0, 0);
+    else drawCamp(ctx, 0, 0, kind === "campEmpty");
+  });
 }
 
 export function bakeArt(id: ArtifactId, scale: number): Baked {

@@ -27,6 +27,10 @@ export const BANNER_KEYS: readonly string[] = ["none", "gold", "crimson", "emera
 export const TEX = {
   pixel: "px",
   chest: "chest",
+  shrine: "site-shrine",
+  well: "site-well",
+  camp: "site-camp",
+  campEmpty: "site-camp-empty",
   hex: "hex",
   hexReach: "hex-reach",
   hexAttack: "hex-attack",

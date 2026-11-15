@@ -6,6 +6,7 @@ import type { SpellId } from "./data/spells";
 import type { StatKey } from "./data/stats";
 import type { Faction, UnitId } from "./data/units";
 import type { AiLevel, ResourceId } from "./data/rules";
+import type { SiteId, WeekEventId } from "./data/sites";
 
 // ================= map / game state =================
 
@@ -20,7 +21,7 @@ export interface ArmyStack {
   countHint?: string;
 }
 
-export type MapObjectKind = "castle" | "mine" | "chest" | "artifact" | "monster";
+export type MapObjectKind = "castle" | "mine" | "chest" | "artifact" | "monster" | "site";
 
 export interface Hero {
   id: string;
@@ -51,6 +52,12 @@ export interface MapObject {
   garrison?: ArmyStack[];
   /** Mines only: what the mine yields (gold when absent). */
   res?: ResourceId;
+  /** Sites only: what kind of site. */
+  site?: SiteId;
+  /** Sites: hero id -> day of its last visit. */
+  visits?: Record<string, number>;
+  /** Mercenary camps: stacks left this week (0 or 1). */
+  stock?: number;
 }
 
 export interface PlayerState {
@@ -99,6 +106,8 @@ export interface GameState {
   log: string[];
   /** Difficulty of the AI players; missing means "normal" (old saves, online matches). */
   aiLevel?: AiLevel;
+  /** Event of the current week (absent: a plain week, also in old saves). */
+  week?: WeekEventId;
 }
 
 export interface PlayerLoadout { startArtifact?: ArtifactId; startGold?: number; banner?: string }

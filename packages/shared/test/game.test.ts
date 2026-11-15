@@ -664,7 +664,7 @@ describe("end of day", () => {
     expect(s.day).toBe(8);
     expect(newWeek).toBe(1);
     expect(player(s, "p0").growth).toEqual({ pike: 20, archer: 12, griffin: 0 });
-    expect(player(s, "p1").growth).toEqual({ skeleton: 21, ghost: 8, lich: 2 });
+    expect(player(s, "p1").growth).toEqual({ skeleton: 22, ghost: 8, lich: 2 });
     expect(player(s, "p0").gold).toBe(2500 + 7 * 1000);
   });
 

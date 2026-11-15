@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import {
-  ARTIFACTS, CHEST_GOLD, MINE_INCOME, REVEAL_HERO, approx, guardOf, revealDisc,
+  ARTIFACTS, CHEST_GOLD, MINE_INCOME, MINE_YIELD, REVEAL_HERO, SHRINE_EXP, WELL_MP, campStack, approx, guardOf, revealDisc,
 } from "@korony/shared";
 import type { GameEvent, GameState, Hero, MapObject, PlayerView, Point } from "@korony/shared";
 import { sfx } from "../audio";
@@ -271,6 +271,11 @@ export class MapScene extends Phaser.Scene {
         break;
       case "chest":
         place(TEX.chest, cx, cy);
+        break;
+      case "site":
+        if (o.site === "shrine") place(TEX.shrine, cx, cy);
+        else if (o.site === "well") place(TEX.well, cx, cy);
+        else if (o.site === "camp") place((o.stock ?? 0) > 0 ? TEX.camp : TEX.campEmpty, cx, cy);
         break;
       case "artifact":
         if (o.artifact) place(artKey(o.artifact), cx, cy);
@@ -600,7 +605,23 @@ export class MapScene extends Phaser.Scene {
       case "chest":
         return t("hint.target.chest", { gold: fmtNum(CHEST_GOLD) });
       case "mine":
-        return o.owner === view.you ? t("hint.target.mineOwn") : t("hint.target.mine", { gold: fmtNum(MINE_INCOME) });
+        if (o.owner === view.you) return t("hint.target.mineOwn");
+        return o.res
+          ? t(o.res === "metal" ? "hint.target.mineMetal" : "hint.target.mineCrystal", { n: MINE_YIELD[o.res] })
+          : t("hint.target.mine", { gold: fmtNum(MINE_INCOME) });
+      case "site": {
+        const hero = myHero(view);
+        const seen = !!hero && o.visits?.[hero.id] !== undefined;
+        if (o.site === "shrine") return seen ? t("hint.target.shrineUsed") : t("hint.target.shrine", { exp: SHRINE_EXP });
+        if (o.site === "well") return hero && o.visits?.[hero.id] === s.day ? t("hint.target.wellUsed") : t("hint.target.well", { mp: WELL_MP });
+        if (o.site === "camp") {
+          const st = view.state.players.find((q) => q.id === view.you);
+          const stack = st ? campStack(st.faction) : undefined;
+          if ((o.stock ?? 0) <= 0 || !stack) return t("hint.target.campEmpty");
+          return t("hint.target.camp", { count: stack.count, unit: unitName(stack.unit).toLowerCase() });
+        }
+        return "";
+      }
       case "artifact": {
         if (!o.artifact) return "";
         const a = ARTIFACTS[o.artifact];

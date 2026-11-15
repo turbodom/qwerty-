@@ -9,6 +9,7 @@ import { createRng } from "./rng";
 import type { Rng } from "./rng";
 import type { ArmyStack, Point } from "./types";
 import type { ResourceId } from "./data/rules";
+import type { SiteId } from "./data/sites";
 
 // Procedural adventure maps. A map id "random-<size>" makes createGame build a fresh map from the game
 // seed, so every match has a different layout. Maps are point-symmetric (rotated 180 degrees around the
@@ -375,6 +376,21 @@ export function generateMap(seed: number, size: MapSize): MapDef {
     const p = spot(0.16, 0.49);
     if (!p) continue;
     add({ kind: "monster", x: p.x, y: p.y, army: monsterArmy(rng, zoneOf(zoneT(p)), guardPower(zoneOf(zoneT(p)))) });
+  }
+
+  // Sites, placed last so the rest of the layout of a seed stays as before: shrines of experience and
+  // wells on the way out, a mercenary camp in the middle ground (unguarded, but in contested land).
+  const sites: [number, number, SiteId][] = [
+    [0.1, 0.3, "well"],
+    [0.12, 0.34, "shrine"],
+    [0.26, 0.46, "camp"],
+    ...Array.from({ length: Math.round(scale) }, (): [number, number, SiteId] => [0.3, 0.49, "shrine"]),
+    ...Array.from({ length: Math.max(0, Math.round(scale) - 1) }, (): [number, number, SiteId] => [0.2, 0.45, "well"]),
+  ];
+  for (const [lo, hi, site] of sites) {
+    const p = spot(lo, hi, 2);
+    if (!p) continue;
+    add({ kind: "site", x: p.x, y: p.y, site });
   }
 
   return {
