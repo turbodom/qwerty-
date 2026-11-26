@@ -24,6 +24,8 @@ export const STORAGE_KEYS = {
   aiLevel: "korony-ai-level",
   /** "0" when the player folded the mini-map away. */
   miniMap: "korony-mini-map",
+  /** The running tutorial: { gameId, step }. */
+  tutorial: "korony-tutorial",
 } as const;
 
 /** In-memory storage (used as a fallback and in tests). */
