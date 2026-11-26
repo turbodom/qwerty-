@@ -54,6 +54,8 @@ export class MapScene extends Phaser.Scene {
   /** A detour is being walked leg by leg. */
   private walking = false;
   private readonly center = { x: 0, y: 0 };
+  /** Called after every camera move (the mini-map draws the visible area). */
+  onCamera: (() => void) | null = null;
   private drag: { id: number; x: number; y: number; cx: number; cy: number; moved: boolean } | null = null;
   private resolveReady: (() => void) | null = null;
   /** Resolves once create() ran. */
@@ -147,6 +149,22 @@ export class MapScene extends Phaser.Scene {
     this.heroes.clear();
     this.clearPath();
     this.fog?.clear();
+  }
+
+  /** Centres the camera on a tile (mini-map taps). */
+  centerOnTile(x: number, y: number): void {
+    this.center.x = x * TILE + TILE / 2;
+    this.center.y = y * TILE + TILE / 2;
+    this.applyCamera();
+  }
+
+  /** The visible part of the map in tiles (fractional), or null before the first view. */
+  visibleTiles(): { x: number; y: number; w: number; h: number } | null {
+    if (!this.view) return null;
+    const cam = this.cameras.main;
+    const w = cam.width / cam.zoom / TILE;
+    const h = cam.height / cam.zoom / TILE;
+    return { x: this.center.x / TILE - w / 2, y: this.center.y / TILE - h / 2, w, h };
   }
 
   /** World position of a tile centre in canvas pixels (for tests and tutorials). */
@@ -371,9 +389,11 @@ export class MapScene extends Phaser.Scene {
     this.center.x = W <= 2 * hw ? W / 2 : Math.min(Math.max(this.center.x, hw), W - hw);
     this.center.y = H <= 2 * hh ? H / 2 : Math.min(Math.max(this.center.y, hh), H - hh);
     cam.centerOn(this.center.x, this.center.y);
+    this.onCamera?.();
   }
 
-  private focusHero(): void {
+  /** Centres the camera on the viewer's active hero. */
+  focusHero(): void {
     const view = this.view;
     const h = view ? myHero(view) : undefined;
     if (!h) return;

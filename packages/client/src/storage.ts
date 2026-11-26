@@ -22,6 +22,8 @@ export const STORAGE_KEYS = {
   aiMap: "korony-ai-map",
   /** AI difficulty for new games against the AI ("easy", "normal", "hard"). */
   aiLevel: "korony-ai-level",
+  /** "0" when the player folded the mini-map away. */
+  miniMap: "korony-mini-map",
 } as const;
 
 /** In-memory storage (used as a fallback and in tests). */

@@ -27,6 +27,8 @@ import { armyChips, heroPanel } from "./panels/hero";
 import { levelUpPanel } from "./panels/levelup";
 import { confirmPanel, menuPanel, resultPanel } from "./panels/misc";
 import { questsPanel } from "./panels/quests";
+import { logPanel } from "./panels/log";
+import { MapTools } from "./mapTools";
 import { shopPanel } from "./panels/shop";
 import { spellbookPanel } from "./panels/spellbook";
 import type { AppApi, PanelFactory } from "./panels/types";
@@ -62,6 +64,10 @@ export class App implements AppApi, ScreenApi, UiHooks {
   private readonly overlay = byId("overlay");
   private readonly toasts = byId("toasts");
   private readonly bar = byId("actionbar");
+  private readonly mapTools = new MapTools({
+    scene: () => this.director.mapScene(),
+    openLog: () => this.openPanel(logPanel),
+  });
   private readonly gameParent = byId("game");
 
   private readonly game: Phaser.Game;
@@ -109,6 +115,7 @@ export class App implements AppApi, ScreenApi, UiHooks {
       scene: [BootScene, MapScene, BattleScene],
     });
     this.director = new Director(this.game, (view, events) => this.onProcessed(view, events));
+    byId("stage").insertBefore(this.mapTools.el, byId("screen"));
     const ro = new ResizeObserver(() => this.resizeGame());
     ro.observe(this.gameParent);
     document.addEventListener("pointerdown", () => unlockAudio(), { once: true, capture: true });
@@ -607,6 +614,7 @@ export class App implements AppApi, ScreenApi, UiHooks {
   private renderBar(): void {
     clear(this.bar);
     const view = this.currentView;
+    this.mapTools.show(this.screen === "game" && view && !this.battleBar && !myBattle(view) ? view : null);
     if (this.screen !== "game" || !view) {
       this.bar.hidden = true;
       return;
