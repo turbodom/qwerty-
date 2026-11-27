@@ -611,7 +611,7 @@ describe("castle economy and hero screen", () => {
       must(s, "p1", { type: "endDay" });
     }
     expect(s.day).toBe(8);
-    expect(p.growth.griffin).toBe(3);
+    expect(p.growth.griffin).toBe(4);
   });
 
   it("equip/unequip move artifacts between bag and slots and cap movement points", () => {

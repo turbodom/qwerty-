@@ -347,7 +347,9 @@ function strike(b: Battle, a: BattleStack, t: BattleStack, ranged: boolean, rng:
   const luck = heroStat(b, a.side, "luck") * 0.1;
   const lucky = luck > 0 && rng.next() < luck;
   if (lucky) d *= 2;
+  const dealt = Math.min(d, totalHp(t));
   dealDamage(t, d, ranged ? "shot" : "melee", ev, lucky);
+  if (ua.drain && !ranged) drainLife(a, Math.round(dealt / 2), ev);
   if (ua.splash) {
     for (const o of aliveStacks(b, t.side)) {
       if (o === t || hexDistance([o.c, o.r], [t.c, t.r]) !== 1) continue;
@@ -360,6 +362,18 @@ function strike(b: Battle, a: BattleStack, t: BattleStack, ranged: boolean, rng:
   }
   if (ranged) a.shots--;
   checkEnd(b, ev);
+}
+
+/** Life drain: heals the stack by `amount` hit points, raising fallen creatures up to its starting count. */
+function drainLife(s: BattleStack, amount: number, ev: BattleEvent[]): void {
+  if (s.count <= 0 || amount <= 0) return;
+  const hp = UNITS[s.unit].hp;
+  const tot = Math.min(s.startCount * hp, totalHp(s) + amount);
+  if (tot <= totalHp(s)) return;
+  const before = s.count;
+  s.count = Math.ceil(tot / hp);
+  s.top = tot - (s.count - 1) * hp;
+  ev.push({ type: "heal", stack: s.id, revived: s.count - before });
 }
 
 /** Morale: chance morale*10% for one extra turn per round (prototype afterAct). */

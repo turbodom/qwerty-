@@ -222,6 +222,30 @@ describe("splash", () => {
   });
 });
 
+describe("life drain", () => {
+  it("spectres heal from their blows and raise fallen ones, never above the starting count", () => {
+    const b = scenario([["spectre", 10, 3, 5]], [["skeleton", 200, 3, 4]]);
+    const sp = b.stacks[0]!;
+    sp.count = 6;
+    sp.top = 18;
+    const r = applyBattleAction(b, { type: "attack", target: 1, from: [3, 5] });
+    expect(r.ok).toBe(true);
+    const melee = dmgEvents(r.events, "melee")[0]!;
+    const heal = r.events.find((e) => e.type === "heal");
+    expect(heal).toMatchObject({ stack: 0 });
+    expect(sp.count).toBeGreaterThan(6);
+    expect(sp.count).toBeLessThanOrEqual(10);
+    expect((sp.count - 1) * 18 + sp.top).toBe(Math.min(180, 5 * 18 + 18 + Math.round(melee.amount / 2)));
+  });
+
+  it("a stack at full strength gains nothing", () => {
+    const b = scenario([["spectre", 10, 3, 5]], [["skeleton", 200, 3, 4]]);
+    const r = applyBattleAction(b, { type: "attack", target: 1, from: [3, 5] });
+    expect(r.events.some((e) => e.type === "heal")).toBe(false);
+    expect(b.stacks[0]!.count).toBe(10);
+  });
+});
+
 describe("shooting and reach", () => {
   it("a shooter next to an enemy cannot shoot but can fight in melee", () => {
     const b = scenario([["archer", 10, 3, 5]], [["skeleton", 10, 3, 4]]);

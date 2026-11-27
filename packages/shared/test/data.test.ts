@@ -26,6 +26,8 @@ describe("units", () => {
     expect(UNITS.lich).toMatchObject({ hp: 30, atk: 13, def: 10, dmg: [11, 13], spd: 6, cost: 550, shots: 12, splash: true });
     expect(UNITS.royalGriffin).toMatchObject({ spd: 9, cost: 300, fly: true, unlimRetal: true });
     expect(UNITS.ghost.noRetal).toBe(true);
+    // every playable unit has an upgrade, so the forge matters for both factions
+    for (const list of Object.values(FACTION_UNITS)) for (const u of list) expect(UNITS[u].upgradesTo).toBeDefined();
     expect(UNITS.pike.antiFly && UNITS.halberd.antiFly).toBe(true);
   });
 
@@ -74,7 +76,7 @@ describe("other data", () => {
 
   it("weekly growth follows the rules", () => {
     expect(weeklyGrowth("castle", 2, {})).toEqual({ pike: 10, archer: 6 });
-    expect(weeklyGrowth("castle", 2, { griffinTower: true })).toEqual({ pike: 10, archer: 6, griffin: 3 });
+    expect(weeklyGrowth("castle", 2, { griffinTower: true })).toEqual({ pike: 10, archer: 6, griffin: 4 });
     // prototype weekly tick: skel +12, ghost +5, lich +2 from week 2 (the start pool 8/3/0 is different)
     expect(weeklyGrowth("necropolis", 1, {})).toEqual({ skeleton: 14, ghost: 5 });
     expect(weeklyGrowth("necropolis", 2, {})).toEqual({ skeleton: 14, ghost: 5, lich: 2 });

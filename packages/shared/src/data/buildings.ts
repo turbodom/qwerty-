@@ -15,7 +15,7 @@ export interface BuildingDef {
 }
 
 export const BUILDINGS: Record<BuildingId, BuildingDef> = {
-  griffinTower: { id: "griffinTower", name: "Грифонья башня", cost: 2000, desc: "открывает грифонов, 3 в неделю" },
+  griffinTower: { id: "griffinTower", name: "Грифонья башня", cost: 2000, desc: "открывает грифонов, 4 в неделю" },
   mageGuild: { id: "mageGuild", name: "Гильдия магов", cost: 1500, desc: "открывает Лечение и Ускорение" },
   forge: { id: "forge", name: "Кузница", cost: 1000, desc: "позволяет улучшать отряды" },
   tavern: { id: "tavern", name: "Таверна", cost: 1000, res: { metal: 5 }, desc: "можно нанять второго героя" },

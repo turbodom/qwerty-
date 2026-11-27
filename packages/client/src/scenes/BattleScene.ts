@@ -754,7 +754,8 @@ export class BattleScene extends Phaser.Scene {
     const ux = (bx - ax) / d;
     const uy = (by - ay) / d;
     const v = this.stacks.get(fromId);
-    const psionic = getStack(this.model, fromId)?.unit === "lich";
+    const shooter = getStack(this.model, fromId)?.unit;
+    const psionic = shooter === "lich" || shooter === "archLich";
     const color = psionic ? 0x9dff6a : 0xffe2a0;
     if (v) await this.tweenTo(v.container, { x: ax + ux * 10 * K, y: ay + uy * 10 * K }, 110 * this.speed);
     const mx = ax + ux * 30 * K;
