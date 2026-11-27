@@ -67,7 +67,7 @@ describe("castle helpers", () => {
     expect(hireInfo(view, "griffin").reason?.key).toBe("reason.needsBuilding");
     expect(buildReason(view, "forge")).toBeNull();
     expect(upgradeInfo(view, "pike")?.reason?.key).toBe("reason.needsBuilding");
-    expect(upgradeInfo(view, "skeleton")).toBeNull();
+    expect(upgradeInfo(view, "wolf")).toBeNull();
     expect(applyAction(s, "you", { type: "build", building: "forge" }).ok).toBe(true);
     view = playerView(s, "you");
     expect(buildReason(view, "mageGuild")?.key).toBe("reason.builtToday");
