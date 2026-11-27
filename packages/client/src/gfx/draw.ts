@@ -118,8 +118,11 @@ export const UNIT_ICON: Record<UnitId, IconKind> = {
   griffin: "griffin",
   royalGriffin: "griffin",
   skeleton: "skel",
+  skeletonWarrior: "skel",
   ghost: "ghost",
+  spectre: "ghost",
   lich: "lich",
+  archLich: "lich",
   wolf: "wolf",
 };
 

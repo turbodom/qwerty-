@@ -19,13 +19,16 @@ const EN_UNITS: Record<UnitId, { name: string; ability?: string }> = {
   griffin: { name: "Griffins", ability: "retaliates against every attack" },
   royalGriffin: { name: "Royal Griffins", ability: "retaliates against every attack" },
   skeleton: { name: "Skeletons" },
+  skeletonWarrior: { name: "Skeleton Warriors" },
   ghost: { name: "Ghosts", ability: "the enemy does not retaliate" },
+  spectre: { name: "Spectres", ability: "the enemy does not retaliate; heals from its own blows" },
   lich: { name: "Liches", ability: "also hits adjacent enemies" },
+  archLich: { name: "Power Liches", ability: "also hits adjacent enemies" },
   wolf: { name: "Wolves" },
 };
 
 const EN_BUILDINGS: Record<BuildingId, { name: string; desc: string }> = {
-  griffinTower: { name: "Griffin Tower", desc: "unlocks griffins, 3 a week" },
+  griffinTower: { name: "Griffin Tower", desc: "unlocks griffins, 4 a week" },
   mageGuild: { name: "Mage Guild", desc: "unlocks Heal and Haste" },
   forge: { name: "Forge", desc: "lets you upgrade units" },
   tavern: { name: "Tavern", desc: "lets you hire a second hero" },

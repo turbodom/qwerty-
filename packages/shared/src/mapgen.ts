@@ -61,8 +61,8 @@ const HOME_GARRISON: Record<PlayableFaction, ArmyStack[]> = {
 const ZONE_UNITS: readonly (readonly UnitId[])[] = [
   ["pike", "skeleton", "wolf"],
   ["wolf", "archer", "skeleton", "ghost", "halberd"],
-  ["ghost", "griffin", "marksman", "wolf", "halberd"],
-  ["lich", "royalGriffin", "griffin", "ghost"],
+  ["ghost", "griffin", "marksman", "wolf", "halberd", "skeletonWarrior"],
+  ["lich", "royalGriffin", "griffin", "ghost", "spectre", "archLich"],
 ];
 
 /** Guard strength per zone as a multiple of a starting army's power: [min, max]. */
