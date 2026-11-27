@@ -21,6 +21,7 @@ export interface ScreenApi {
   logout(): void;
   goLogin(): void;
   playAi(fresh: boolean): void;
+  playTutorial(): void;
   playOnline(code?: string): void;
   resumeOnline(): void;
   openShop(): void;
@@ -272,6 +273,7 @@ export function lobbyScreen(api: ScreenApi): HTMLElement {
           )
         : null,
       h("p", { class: "fx" }, t("lobby.playAiHint")),
+      h("button", { class: "btn ghost block", testid: "play-tutorial", onClick: () => api.playTutorial() }, t("lobby.tutorial")),
     ),
   );
 

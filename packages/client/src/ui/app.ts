@@ -29,6 +29,8 @@ import { confirmPanel, menuPanel, resultPanel } from "./panels/misc";
 import { questsPanel } from "./panels/quests";
 import { logPanel } from "./panels/log";
 import { MapTools } from "./mapTools";
+import { Coach } from "./coach";
+import { TUTORIAL_MAP } from "../game/tutorial";
 import { shopPanel } from "./panels/shop";
 import { spellbookPanel } from "./panels/spellbook";
 import type { AppApi, PanelFactory } from "./panels/types";
@@ -64,6 +66,7 @@ export class App implements AppApi, ScreenApi, UiHooks {
   private readonly overlay = byId("overlay");
   private readonly toasts = byId("toasts");
   private readonly bar = byId("actionbar");
+  private readonly coach = new Coach();
   private readonly mapTools = new MapTools({
     scene: () => this.director.mapScene(),
     openLog: () => this.openPanel(logPanel),
@@ -116,6 +119,7 @@ export class App implements AppApi, ScreenApi, UiHooks {
     });
     this.director = new Director(this.game, (view, events) => this.onProcessed(view, events));
     byId("stage").insertBefore(this.mapTools.el, byId("screen"));
+    byId("stage").insertBefore(this.coach.el, byId("screen"));
     const ro = new ResizeObserver(() => this.resizeGame());
     ro.observe(this.gameParent);
     document.addEventListener("pointerdown", () => unlockAudio(), { once: true, capture: true });
@@ -270,6 +274,14 @@ export class App implements AppApi, ScreenApi, UiHooks {
     void this.startLocal(fresh);
   }
 
+  playTutorial(): void {
+    if (LocalGame.savedDay() !== null) {
+      this.openPanel(confirmPanel(t("lobby.newGameConfirm"), () => void this.startLocal(true, true)));
+      return;
+    }
+    void this.startLocal(true, true);
+  }
+
   playOnline(code?: string): void {
     void this.startOnline(code);
   }
@@ -318,16 +330,20 @@ export class App implements AppApi, ScreenApi, UiHooks {
 
   // ================= starting / leaving games =================
 
-  private async startLocal(fresh: boolean): Promise<void> {
+  /** `tutorial`: a fresh game on the small valley against an easy AI, with the tutorial card. */
+  private async startLocal(fresh: boolean, tutorial = false): Promise<void> {
     this.closePanel();
     let game = fresh ? null : LocalGame.load();
     if (!game) {
       const user = this.currentUser;
       let loadout = user ? loadoutFromOwned(user.owned, user.banner) : undefined;
       if (user && getToken()) loadout = await withTimeout(api.loadout(user), 1500).catch(() => loadout);
-      const mapId = chosenAiMap();
-      const aiLevel = chosenAiLevel();
+      const mapId = tutorial ? TUTORIAL_MAP : chosenAiMap();
+      const aiLevel = tutorial ? "easy" : chosenAiLevel();
       game = LocalGame.create(user ? { name: user.username, mapId, aiLevel, ...(loadout ? { loadout } : {}) } : { mapId, aiLevel });
+      // a new game ends a running tutorial; the tutorial button starts one for this game
+      if (tutorial) this.coach.begin(game.snapshot().id);
+      else this.coach.stop();
     }
     this.attach(game);
   }
@@ -513,6 +529,8 @@ export class App implements AppApi, ScreenApi, UiHooks {
 
     this.renderTop();
     this.renderBar();
+    if (this.conn?.kind === "local") this.coach.update(view, events, !inBattle);
+    if (view.state.winner !== null) this.coach.stop();
 
     if (view.state.winner !== null && !this.resultShown) {
       this.resultShown = true;
@@ -614,7 +632,9 @@ export class App implements AppApi, ScreenApi, UiHooks {
   private renderBar(): void {
     clear(this.bar);
     const view = this.currentView;
-    this.mapTools.show(this.screen === "game" && view && !this.battleBar && !myBattle(view) ? view : null);
+    const onMap = this.screen === "game" && !!view && !this.battleBar && !myBattle(view);
+    this.mapTools.show(onMap ? view : null);
+    this.coach.update(this.conn?.kind === "local" ? view : null, [], onMap);
     if (this.screen !== "game" || !view) {
       this.bar.hidden = true;
       return;
@@ -751,6 +771,7 @@ export class App implements AppApi, ScreenApi, UiHooks {
 
   openPanel(factory: PanelFactory): void {
     this.panel = factory;
+    if (factory === castlePanel) this.coach.castleOpened();
     if (factory !== this.spellbookFactory) this.spellbookFactory = null;
     this.renderPanel(true);
   }

@@ -87,6 +87,14 @@ button, input { font: inherit; color: inherit; }
 }
 .icon-btn:active { transform: translateY(1px); }
 
+/* ---------- tutorial card ---------- */
+.coach { position: absolute; top: 8px; left: 8px; z-index: 6; width: min(300px, calc(100% - 150px)); min-width: 200px; padding: 8px 10px; border: 1px solid var(--frame); border-radius: 8px; background: rgba(20, 18, 14, 0.94); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6); font-size: 13px; line-height: 1.3; animation: toast-in 0.25s ease-out; }
+.coach-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; color: var(--gold-2); font-family: var(--display); letter-spacing: 0.03em; }
+.coach-head small { color: var(--muted); font-family: var(--body); }
+.coach p { margin: 4px 0 6px; color: var(--text); }
+.coach-actions { display: flex; justify-content: flex-end; }
+.coach-actions .btn.small { padding: 4px 12px; min-height: 0; font-size: 12px; }
+
 /* ---------- map tools: mini-map, chronicle, to the hero ---------- */
 .maptools { position: absolute; top: 8px; right: 8px; z-index: 5; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; pointer-events: none; }
 .maptools > * { pointer-events: auto; }
